@@ -1,15 +1,43 @@
 import type { XIRRResult } from '../../types/investment';
-import { formatIDRAbbreviated } from '../../utils/xirr';
 
 interface Props {
   result: XIRRResult;
   location: string;
+  currency: 'IDR' | 'USD' | 'AUD' | 'EUR';
   onCalculate: () => void;
 }
 
-export function ProjectForecast({ result, location, onCalculate }: Props) {
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  IDR: 'Rp',
+  USD: '$',
+  AUD: 'A$',
+  EUR: '€'
+};
+
+export function ProjectForecast({ result, location, currency, onCalculate }: Props) {
   const xirrPercent = (result.rate * 100).toFixed(1);
   const isPositive = result.rate >= 0;
+
+  const formatAbbreviated = (amount: number): string => {
+    if (currency === 'IDR') {
+      if (amount >= 1_000_000_000) {
+        return `${(amount / 1_000_000_000).toFixed(2)}B`;
+      }
+      if (amount >= 1_000_000) {
+        return `${(amount / 1_000_000).toFixed(0)}M`;
+      }
+    } else {
+      if (amount >= 1_000_000) {
+        return `${(amount / 1_000_000).toFixed(2)}M`;
+      }
+      if (amount >= 1_000) {
+        return `${(amount / 1_000).toFixed(0)}K`;
+      }
+    }
+    return new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: currency === 'IDR' ? 0 : 2,
+    }).format(amount);
+  };
 
   return (
     <div className="sticky top-28 flex flex-col gap-6">
@@ -38,13 +66,13 @@ export function ProjectForecast({ result, location, onCalculate }: Props) {
           <div className="flex items-center justify-between border-b border-border-dark/50 pb-2">
             <span className="text-sm text-text-secondary">Total Invested</span>
             <span className="text-sm font-mono font-medium text-white">
-              {formatIDRAbbreviated(result.totalInvested)} IDR
+              {formatAbbreviated(result.totalInvested)} {currency}
             </span>
           </div>
           <div className="flex items-center justify-between border-b border-border-dark/50 pb-2">
             <span className="text-sm text-text-secondary">Net Profit</span>
             <span className={`text-sm font-mono font-medium ${result.netProfit >= 0 ? 'text-primary' : 'text-red-400'}`}>
-              {result.netProfit >= 0 ? '+' : ''}{formatIDRAbbreviated(result.netProfit)} IDR
+              {result.netProfit >= 0 ? '+' : ''}{formatAbbreviated(result.netProfit)} {currency}
             </span>
           </div>
           <div className="flex items-center justify-between pb-2">

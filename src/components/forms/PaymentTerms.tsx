@@ -1,5 +1,4 @@
 import type { PaymentTerms as PaymentTermsType, PropertyDetails } from '../../types/investment';
-import { formatIDR } from '../../utils/xirr';
 
 interface Props {
   data: PaymentTermsType;
@@ -7,7 +6,22 @@ interface Props {
   onUpdate: <K extends keyof PaymentTermsType>(key: K, value: PaymentTermsType[K]) => void;
 }
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  IDR: 'Rp',
+  USD: '$',
+  AUD: 'A$',
+  EUR: '€'
+};
+
 export function PaymentTerms({ data, property, onUpdate }: Props) {
+  const currencySymbol = CURRENCY_SYMBOLS[property.currency] || 'Rp';
+  
+  const formatNumber = (num: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: property.currency === 'IDR' ? 0 : 2,
+    }).format(num);
+  };
+
   const downPaymentAmount = property.totalPrice * (data.downPaymentPercent / 100);
   const remainingAmount = property.totalPrice - downPaymentAmount;
   const monthlyAmount = data.installmentMonths > 0 
@@ -81,8 +95,8 @@ export function PaymentTerms({ data, property, onUpdate }: Props) {
                 Down Payment ({data.downPaymentPercent}%)
               </span>
               <div className="flex items-center gap-2 text-white font-mono text-lg font-semibold">
-                <span className="text-text-secondary font-normal">Rp</span>
-                {formatIDR(downPaymentAmount)}
+                <span className="text-text-secondary font-normal">{currencySymbol}</span>
+                {formatNumber(downPaymentAmount)}
               </div>
               <p className="text-xs text-text-secondary mt-2">Due immediately upon signing.</p>
             </div>
@@ -134,12 +148,12 @@ export function PaymentTerms({ data, property, onUpdate }: Props) {
                 
                 <div className="text-center">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                    {Math.round(100 - data.downPaymentPercent) / data.installmentMonths}% per month
+                    {((100 - data.downPaymentPercent) / data.installmentMonths).toFixed(1)}% per month
                   </span>
                 </div>
                 
                 <div className="text-right">
-                  <p className="text-sm font-mono text-white">Rp {formatIDR(monthlyAmount)}</p>
+                  <p className="text-sm font-mono text-white">{currencySymbol} {formatNumber(monthlyAmount)}</p>
                 </div>
               </div>
             </div>

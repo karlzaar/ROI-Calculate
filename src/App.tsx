@@ -17,7 +17,9 @@ function App() {
     updateExit,
     addCashFlow,
     removeCashFlow,
-    updateCashFlow
+    updateCashFlow,
+    ratesLoading,
+    lastUpdated
   } = useInvestment();
 
   const handleCalculate = () => {
@@ -48,7 +50,9 @@ function App() {
             <div className="lg:col-span-8 flex flex-col gap-8">
               <PropertyDetails 
                 data={data.property} 
-                onUpdate={updateProperty} 
+                onUpdate={updateProperty}
+                ratesLoading={ratesLoading}
+                lastUpdated={lastUpdated}
               />
               
               <PaymentTerms 
@@ -60,11 +64,13 @@ function App() {
               <ExitStrategy
                 data={data.exit}
                 totalPrice={data.property.totalPrice}
+                currency={data.property.currency}
                 onUpdate={updateExit}
               />
               
               <CashFlows
                 entries={data.additionalCashFlows}
+                currency={data.property.currency}
                 onAdd={addCashFlow}
                 onRemove={removeCashFlow}
                 onUpdate={updateCashFlow}
@@ -76,6 +82,7 @@ function App() {
               <ProjectForecast
                 result={result}
                 location={data.property.location}
+                currency={data.property.currency}
                 onCalculate={handleCalculate}
               />
             </div>

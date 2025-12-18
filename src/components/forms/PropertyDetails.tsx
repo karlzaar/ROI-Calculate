@@ -1,9 +1,10 @@
 import type { PropertyDetails as PropertyDetailsType } from '../../types/investment';
-import { formatIDR, parseIDR } from '../../utils/xirr';
 
 interface Props {
   data: PropertyDetailsType;
   onUpdate: <K extends keyof PropertyDetailsType>(key: K, value: PropertyDetailsType[K]) => void;
+  ratesLoading?: boolean;
+  lastUpdated?: Date | null;
 }
 
 const LOCATIONS = [
@@ -15,9 +16,28 @@ const LOCATIONS = [
   'Nusa Dua, Bali'
 ];
 
-export function PropertyDetails({ data, onUpdate }: Props) {
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  IDR: 'Rp',
+  USD: '$',
+  AUD: 'A$',
+  EUR: '€'
+};
+
+export function PropertyDetails({ data, onUpdate, ratesLoading, lastUpdated }: Props) {
+  const currencySymbol = CURRENCY_SYMBOLS[data.currency] || 'Rp';
+  
+  const formatNumber = (num: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: data.currency === 'IDR' ? 0 : 2,
+    }).format(num);
+  };
+
+  const parseNumber = (str: string): number => {
+    return parseFloat(str.replace(/[^0-9.-]/g, '')) || 0;
+  };
+
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseIDR(e.target.value);
+    const value = parseNumber(e.target.value);
     onUpdate('totalPrice', value);
   };
 
@@ -68,10 +88,12 @@ export function PropertyDetails({ data, onUpdate }: Props) {
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-secondary">Total Price</span>
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary font-mono">Rp</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary font-mono">
+              {currencySymbol}
+            </span>
             <input
               type="text"
-              value={formatIDR(data.totalPrice)}
+              value={formatNumber(data.totalPrice)}
               onChange={handlePriceChange}
               className="w-full rounded-lg bg-surface-dark border border-border-dark px-4 py-3 pl-12 text-white font-mono text-lg placeholder-text-secondary/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all"
             />
@@ -94,8 +116,22 @@ export function PropertyDetails({ data, onUpdate }: Props) {
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-text-secondary">Base Currency</span>
             <span className="text-xs text-primary flex items-center gap-1">
-              <span className="material-symbols-outlined text-[16px]">sync</span>
-              Live Rates Active
+              {ratesLoading ? (
+                <>
+                  <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
+                  Loading rates...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                  Live Rates Active
+                  {lastUpdated && (
+                    <span className="text-text-secondary ml-1">
+                      (updated {lastUpdated.toLocaleTimeString()})
+                    </span>
+                  )}
+                </>
+              )}
             </span>
           </div>
           <div className="relative">
@@ -113,6 +149,9 @@ export function PropertyDetails({ data, onUpdate }: Props) {
               expand_more
             </span>
           </div>
+          <p className="text-xs text-text-secondary/70">
+            Changing currency will automatically convert all amounts using live exchange rates.
+          </p>
         </label>
       </div>
     </section>

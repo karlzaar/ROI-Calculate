@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import type { InvestmentData, XIRRResult, CashFlowEntry } from '../types/investment';
 import { calculateInvestmentReturn } from '../utils/xirr';
 import { v4 as uuidv4 } from 'uuid';
+import { useCurrency } from './useCurrency';
 
 const DEFAULT_INVESTMENT: InvestmentData = {
   property: {
@@ -33,6 +34,10 @@ const DEFAULT_INVESTMENT: InvestmentData = {
 
 export function useInvestment() {
   const [data, setData] = useState<InvestmentData>(DEFAULT_INVESTMENT);
+  const { convert, formatCurrency, loading: ratesLoading, lastUpdated } = useCurrency();
+  
+  // Track the previous currency to enable conversion
+  const previousCurrency = useRef(data.property.currency);
   
   const result: XIRRResult = useMemo(() => {
     return calculateInvestmentReturn(data);
@@ -42,11 +47,43 @@ export function useInvestment() {
     key: K,
     value: InvestmentData['property'][K]
   ) => {
-    setData(prev => ({
-      ...prev,
-      property: { ...prev.property, [key]: value }
-    }));
-  }, []);
+    setData(prev => {
+      // Handle currency change with conversion
+      if (key === 'currency' && value !== prev.property.currency) {
+        const oldCurrency = prev.property.currency;
+        const newCurrency = value as 'IDR' | 'USD' | 'AUD' | 'EUR';
+        
+        // Convert all monetary values
+        const newTotalPrice = convert(prev.property.totalPrice, oldCurrency, newCurrency);
+        const newSalesPrice = convert(prev.exit.projectedSalesPrice, oldCurrency, newCurrency);
+        const newCashFlows = prev.additionalCashFlows.map(cf => ({
+          ...cf,
+          amount: convert(cf.amount, oldCurrency, newCurrency)
+        }));
+        
+        previousCurrency.current = newCurrency;
+        
+        return {
+          ...prev,
+          property: { 
+            ...prev.property, 
+            currency: newCurrency,
+            totalPrice: newTotalPrice 
+          },
+          exit: {
+            ...prev.exit,
+            projectedSalesPrice: newSalesPrice
+          },
+          additionalCashFlows: newCashFlows
+        };
+      }
+      
+      return {
+        ...prev,
+        property: { ...prev.property, [key]: value }
+      };
+    });
+  }, [convert]);
   
   const updatePayment = useCallback(<K extends keyof InvestmentData['payment']>(
     key: K,
@@ -96,6 +133,7 @@ export function useInvestment() {
   
   const reset = useCallback(() => {
     setData(DEFAULT_INVESTMENT);
+    previousCurrency.current = 'IDR';
   }, []);
   
   return {
@@ -107,6 +145,10 @@ export function useInvestment() {
     addCashFlow,
     removeCashFlow,
     updateCashFlow,
-    reset
+    reset,
+    // Currency utilities
+    formatCurrency,
+    ratesLoading,
+    lastUpdated
   };
 }

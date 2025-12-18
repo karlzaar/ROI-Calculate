@@ -1,13 +1,32 @@
 import type { ExitStrategy as ExitStrategyType } from '../../types/investment';
-import { formatIDR, parseIDR } from '../../utils/xirr';
 
 interface Props {
   data: ExitStrategyType;
   totalPrice: number;
+  currency: 'IDR' | 'USD' | 'AUD' | 'EUR';
   onUpdate: <K extends keyof ExitStrategyType>(key: K, value: ExitStrategyType[K]) => void;
 }
 
-export function ExitStrategy({ data, totalPrice, onUpdate }: Props) {
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  IDR: 'Rp',
+  USD: '$',
+  AUD: 'A$',
+  EUR: '€'
+};
+
+export function ExitStrategy({ data, totalPrice, currency, onUpdate }: Props) {
+  const currencySymbol = CURRENCY_SYMBOLS[currency] || 'Rp';
+  
+  const formatNumber = (num: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: currency === 'IDR' ? 0 : 2,
+    }).format(num);
+  };
+
+  const parseNumber = (str: string): number => {
+    return parseFloat(str.replace(/[^0-9.-]/g, '')) || 0;
+  };
+
   const closingCostAmount = data.projectedSalesPrice * (data.closingCostPercent / 100);
   const appreciationPercent = totalPrice > 0 
     ? ((data.projectedSalesPrice - totalPrice) / totalPrice * 100).toFixed(1)
@@ -28,11 +47,13 @@ export function ExitStrategy({ data, totalPrice, onUpdate }: Props) {
             Estimated market value upon completion (Currently: +{appreciationPercent}%)
           </span>
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary font-mono">Rp</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary font-mono">
+              {currencySymbol}
+            </span>
             <input
               type="text"
-              value={formatIDR(data.projectedSalesPrice)}
-              onChange={(e) => onUpdate('projectedSalesPrice', parseIDR(e.target.value))}
+              value={formatNumber(data.projectedSalesPrice)}
+              onChange={(e) => onUpdate('projectedSalesPrice', parseNumber(e.target.value))}
               className="w-full rounded-lg bg-surface-dark border border-border-dark px-4 py-3 pl-12 text-white font-mono text-lg placeholder-text-secondary/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all"
             />
           </div>
@@ -56,10 +77,12 @@ export function ExitStrategy({ data, totalPrice, onUpdate }: Props) {
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary">%</span>
             </div>
             <div className="relative flex-grow">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary font-mono">Rp</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary font-mono">
+                {currencySymbol}
+              </span>
               <input
                 type="text"
-                value={formatIDR(closingCostAmount)}
+                value={formatNumber(closingCostAmount)}
                 readOnly
                 className="w-full rounded-lg bg-surface-dark/50 border border-border-dark px-4 py-3 pl-12 text-white font-mono text-lg placeholder-text-secondary/50 cursor-not-allowed"
               />

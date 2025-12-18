@@ -1,15 +1,34 @@
 import type { CashFlowEntry } from '../../types/investment';
-import { formatIDR, parseIDR } from '../../utils/xirr';
 import { useState } from 'react';
 
 interface Props {
   entries: CashFlowEntry[];
+  currency: 'IDR' | 'USD' | 'AUD' | 'EUR';
   onAdd: (entry: Omit<CashFlowEntry, 'id'>) => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<CashFlowEntry>) => void;
 }
 
-export function CashFlows({ entries, onAdd, onRemove, onUpdate }: Props) {
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  IDR: 'Rp',
+  USD: '$',
+  AUD: 'A$',
+  EUR: '€'
+};
+
+export function CashFlows({ entries, currency, onAdd, onRemove, onUpdate }: Props) {
+  const currencySymbol = CURRENCY_SYMBOLS[currency] || 'Rp';
+  
+  const formatNumber = (num: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: currency === 'IDR' ? 0 : 2,
+    }).format(num);
+  };
+
+  const parseNumber = (str: string): number => {
+    return parseFloat(str.replace(/[^0-9.-]/g, '')) || 0;
+  };
+
   const [newEntry, setNewEntry] = useState({
     date: '',
     description: '',
@@ -51,7 +70,7 @@ export function CashFlows({ entries, onAdd, onRemove, onUpdate }: Props) {
         <div className="col-span-3">Date</div>
         <div className="col-span-4">Description</div>
         <div className="col-span-2">Type</div>
-        <div className="col-span-3 text-right">Amount</div>
+        <div className="col-span-3 text-right">Amount ({currency})</div>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -91,7 +110,7 @@ export function CashFlows({ entries, onAdd, onRemove, onUpdate }: Props) {
             </div>
             <div className="md:col-span-3 flex items-center justify-end gap-3">
               <span className="font-mono text-white text-sm">
-                {entry.type === 'inflow' ? '+' : '-'}{formatIDR(entry.amount)}
+                {entry.type === 'inflow' ? '+' : '-'}{currencySymbol} {formatNumber(entry.amount)}
               </span>
               <button
                 onClick={() => onRemove(entry.id)}
@@ -136,8 +155,8 @@ export function CashFlows({ entries, onAdd, onRemove, onUpdate }: Props) {
             <input
               type="text"
               placeholder="Amount"
-              value={newEntry.amount > 0 ? formatIDR(newEntry.amount) : ''}
-              onChange={(e) => setNewEntry({ ...newEntry, amount: parseIDR(e.target.value) })}
+              value={newEntry.amount > 0 ? formatNumber(newEntry.amount) : ''}
+              onChange={(e) => setNewEntry({ ...newEntry, amount: parseNumber(e.target.value) })}
               className="w-full rounded bg-surface-dark border border-border-dark px-2 py-1 text-white text-sm text-right font-mono focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
