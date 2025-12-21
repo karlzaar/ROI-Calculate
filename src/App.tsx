@@ -37,6 +37,7 @@ function App() {
     addCashFlow,
     removeCashFlow,
     updateCashFlow,
+    reset,
   } = useInvestment();
 
   const [isSaving, setIsSaving] = useState(false);
@@ -56,6 +57,14 @@ function App() {
       setToast({ message: 'Failed to save draft', type: 'error' });
     }
   }, [data]);
+
+  const handleClearAll = useCallback(() => {
+    if (window.confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+      reset();
+      setToast({ message: 'All data cleared', type: 'success' });
+    }
+  }, [reset]);
 
   const handleExportPDF = useCallback(() => {
     try {
@@ -80,7 +89,7 @@ function App() {
 
   return (
     <div className="bg-[#112217] text-white font-display min-h-screen flex flex-col">
-      <Header onSaveDraft={handleSaveDraft} isSaving={isSaving} />
+      <Header onSaveDraft={handleSaveDraft} onClearAll={handleClearAll} isSaving={isSaving} />
 
       {toast && (
         <Toast
