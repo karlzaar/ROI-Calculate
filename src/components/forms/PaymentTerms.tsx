@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { PaymentTerms as PaymentTermsType, PaymentScheduleEntry } from '../../types/investment';
 
 interface Props {
@@ -36,9 +36,16 @@ export function PaymentTerms({
   const scheduleTotalDisplay = hasSchedule ? remainingDisplay : 0;
 
   // Auto-generate schedule when price is set but no schedule exists
+  // Using a ref to prevent re-triggering
+  const hasTriggeredRef = useRef(false);
   useEffect(() => {
-    if (!hasSchedule && totalPriceIDR > 0) {
+    if (!hasSchedule && totalPriceIDR > 0 && !hasTriggeredRef.current) {
+      hasTriggeredRef.current = true;
       onRegenerateSchedule();
+    }
+    // Reset when schedule is cleared
+    if (hasSchedule) {
+      hasTriggeredRef.current = false;
     }
   }, [hasSchedule, totalPriceIDR, onRegenerateSchedule]);
 
