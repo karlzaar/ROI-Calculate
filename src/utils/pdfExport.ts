@@ -303,6 +303,7 @@ export function generatePDFReport(options: PDFExportOptions): void {
     // Payment rows
     let rowY = tableY + rowHeight;
     const monthlyPercent = (100 - data.payment.downPaymentPercent) / data.payment.installmentMonths;
+    const baseMonthlyPayment = Math.floor(monthlyPayment);
 
     for (let i = 0; i < data.payment.installmentMonths; i++) {
       const paymentDate = new Date();
@@ -312,6 +313,13 @@ export function generatePDFReport(options: PDFExportOptions): void {
         day: 'numeric',
         year: 'numeric',
       });
+
+      // For last installment, add any rounding difference to ensure 100% coverage
+      const isLastPayment = i === data.payment.installmentMonths - 1;
+      const previousPaymentsTotal = baseMonthlyPayment * i;
+      const thisPaymentAmount = isLastPayment
+        ? remaining - previousPaymentsTotal
+        : baseMonthlyPayment;
 
       // Alternate row background
       if (i % 2 === 0) {
@@ -332,7 +340,7 @@ export function generatePDFReport(options: PDFExportOptions): void {
 
       doc.setTextColor(...COLORS.textPrimary);
       doc.setFont('helvetica', 'bold');
-      doc.text(`${symbol}${formatDisplay(monthlyPayment)}`, pageWidth - margin - 8, rowY + 5.5, { align: 'right' });
+      doc.text(`${symbol}${formatDisplay(thisPaymentAmount)}`, pageWidth - margin - 8, rowY + 5.5, { align: 'right' });
 
       rowY += rowHeight;
     }
