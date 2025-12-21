@@ -29,10 +29,16 @@ export function PaymentTerms({
 
   // Use schedule if available, otherwise calculate
   const hasSchedule = data.schedule && data.schedule.length > 0;
-  // Calculate actual total from stored schedule amounts (preserves manual edits)
-  const scheduleTotalDisplay = hasSchedule
-    ? data.schedule.reduce((sum, entry) => sum + idrToDisplay(entry.amount), 0)
+  // Calculate actual total from stored schedule amounts in IDR first, then convert
+  // This avoids rounding errors from summing individually-converted amounts
+  const scheduleTotalIDR = hasSchedule
+    ? data.schedule.reduce((sum, entry) => sum + entry.amount, 0)
     : 0;
+  const scheduleTotalDisplay = idrToDisplay(scheduleTotalIDR);
+
+  // Expected remaining (50% of total price)
+  const expectedRemainingIDR = totalPriceIDR * (1 - DOWN_PAYMENT_PERCENT / 100);
+  const expectedRemainingDisplay = idrToDisplay(expectedRemainingIDR);
 
   const parseAmountInput = (value: string): number => {
     const digits = value.replace(/\D/g, '');
@@ -164,9 +170,25 @@ export function PaymentTerms({
 
                 {/* Payment Rows */}
                 <div className="max-h-64 overflow-y-auto">
-                  {data.schedule.map((entry, i) => {
-                    // Show ACTUAL stored amount - preserves manual edits
-                    const displayAmount = idrToDisplay(entry.amount);
+                  {(() => {
+                    // Pre-calculate display amounts to ensure they sum correctly
+                    // Last payment gets adjusted so visual sum = displayed total
+                    const displayAmounts: number[] = [];
+                    let runningSum = 0;
+
+                    for (let i = 0; i < data.schedule.length; i++) {
+                      if (i === data.schedule.length - 1) {
+                        // Last payment: total minus sum of previous displayed amounts
+                        displayAmounts.push(scheduleTotalDisplay - runningSum);
+                      } else {
+                        const amt = idrToDisplay(data.schedule[i].amount);
+                        displayAmounts.push(amt);
+                        runningSum += amt;
+                      }
+                    }
+
+                    return data.schedule.map((entry, i) => {
+                    const displayAmount = displayAmounts[i];
 
                     return (
                       <div
@@ -199,7 +221,8 @@ export function PaymentTerms({
                         </div>
                       </div>
                     );
-                  })}
+                  });
+                  })()}
                 </div>
 
                 {/* Total Row */}
@@ -207,9 +230,14 @@ export function PaymentTerms({
                   <div className="col-span-1"></div>
                   <div className="col-span-5 text-text-secondary font-medium text-sm">
                     Total Scheduled
+                    {scheduleTotalIDR !== expectedRemainingIDR && (
+                      <span className="ml-2 text-xs text-yellow-400" title="Schedule total doesn't match expected 50%">
+                        ⚠️ Expected: {symbol} {formatNumber(expectedRemainingDisplay)}
+                      </span>
+                    )}
                   </div>
                   <div className="col-span-6 text-right">
-                    <span className="font-mono font-bold text-primary">
+                    <span className={`font-mono font-bold ${scheduleTotalIDR === expectedRemainingIDR ? 'text-primary' : 'text-yellow-400'}`}>
                       {symbol} {formatNumber(scheduleTotalDisplay)}
                     </span>
                   </div>

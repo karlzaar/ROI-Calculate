@@ -294,7 +294,7 @@ export function generatePDFReport(options: PDFExportOptions): void {
 
   yPos += propCardHeight + 6;
 
-  // Payment Schedule Card (with individual rows)
+  // Payment Schedule Card (with individual rows, multi-page support)
   if (data.payment.type === 'plan') {
     const downPayment = data.property.totalPrice * (data.payment.downPaymentPercent / 100);
     const remaining = data.property.totalPrice - downPayment;
@@ -302,142 +302,151 @@ export function generatePDFReport(options: PDFExportOptions): void {
     // Use schedule data if available, otherwise calculate
     const hasSchedule = data.payment.schedule && data.payment.schedule.length > 0;
     const scheduleEntries = hasSchedule ? data.payment.schedule : [];
-    const numRows = hasSchedule ? scheduleEntries.length : data.payment.installmentMonths;
 
+    // Original row height for readability
     const rowHeight = 8;
-    const headerHeight = 20;
-    const scheduleCardHeight = headerHeight + (numRows + 2) * rowHeight + 6;
-
-    doc.setFillColor(...COLORS.surface);
-    doc.roundedRect(margin, yPos, contentWidth, scheduleCardHeight, 2, 2, 'F');
-    doc.setDrawColor(...COLORS.border);
-    doc.roundedRect(margin, yPos, contentWidth, scheduleCardHeight, 2, 2, 'S');
-
-    doc.setTextColor(...COLORS.primary);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Payment Schedule', margin + 6, yPos + 10);
-
-    // Down payment info
-    doc.setTextColor(...COLORS.textSecondary);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Down Payment: ${data.payment.downPaymentPercent}% (${symbol}${formatDisplay(downPayment)})`, margin + 6, yPos + 17);
-
-    // Table header
-    const tableY = yPos + headerHeight;
-    doc.setFillColor(...COLORS.surfaceDark);
-    doc.rect(margin + 4, tableY, contentWidth - 8, rowHeight, 'F');
-
-    doc.setTextColor(...COLORS.textSecondary);
-    doc.setFontSize(6);
-    doc.setFont('helvetica', 'bold');
-    doc.text('#', margin + 8, tableY + 5.5);
-    doc.text('DUE DATE', margin + 20, tableY + 5.5);
-    doc.text('AMOUNT', pageWidth - margin - 8, tableY + 5.5, { align: 'right' });
-
-    // Payment rows
-    let rowY = tableY + rowHeight;
+    const headerHeight = 22;
+    const footerSpace = 25;
 
     // Helper to convert IDR to display currency
     const idrToDisplayNum = (idr: number): number => Math.round(idr / rate);
-    let totalForDisplay = idrToDisplayNum(remaining);
+    let totalForDisplay = 0;
 
-    if (hasSchedule) {
-      // Show ACTUAL stored values - matches UI exactly and preserves manual edits
-      let actualTotal = 0;
+    // Draw schedule header
+    const drawScheduleHeader = (startY: number, isFirstPage: boolean): number => {
+      doc.setFillColor(...COLORS.surface);
+      doc.setDrawColor(...COLORS.border);
 
-      for (let i = 0; i < scheduleEntries.length; i++) {
-        const entry = scheduleEntries[i];
-        // Use ACTUAL stored amount - no recalculation, preserves edits
-        const displayAmount = idrToDisplayNum(entry.amount);
-        actualTotal += displayAmount;
+      doc.setTextColor(...COLORS.primary);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(isFirstPage ? 'Payment Schedule' : 'Payment Schedule (continued)', margin + 6, startY + 10);
 
-        // Use the EXACT date from the schedule (preserves manual edits)
-        const dateStr = new Date(entry.date).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        });
-
-        // Alternate row background
-        if (i % 2 === 0) {
-          doc.setFillColor(COLORS.surfaceDark[0] * 0.5, COLORS.surfaceDark[1] * 0.5, COLORS.surfaceDark[2] * 0.5);
-          doc.rect(margin + 4, rowY, contentWidth - 8, rowHeight, 'F');
-        }
-
+      if (isFirstPage) {
+        // Down payment info only on first page
         doc.setTextColor(...COLORS.textSecondary);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
-        doc.text(`${i + 1}`, margin + 8, rowY + 5.5);
-
-        doc.setTextColor(...COLORS.textPrimary);
-        doc.text(dateStr, margin + 20, rowY + 5.5);
-
-        doc.setTextColor(...COLORS.textPrimary);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${symbol}${displayAmount.toLocaleString('en-US')}`, pageWidth - margin - 8, rowY + 5.5, { align: 'right' });
-
-        rowY += rowHeight;
+        doc.text(`Down Payment: ${data.payment.downPaymentPercent}% (${symbol}${formatDisplay(downPayment)})`, margin + 6, startY + 18);
       }
 
-      // Total is actual sum of displayed amounts (matches UI)
-      totalForDisplay = actualTotal;
+      // Table header
+      const tableHeaderY = startY + headerHeight;
+      doc.setFillColor(...COLORS.surfaceDark);
+      doc.rect(margin, tableHeaderY, contentWidth, rowHeight, 'F');
+
+      doc.setTextColor(...COLORS.textSecondary);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.text('#', margin + 6, tableHeaderY + 5.5);
+      doc.text('DUE DATE', margin + 25, tableHeaderY + 5.5);
+      doc.text('AMOUNT', pageWidth - margin - 6, tableHeaderY + 5.5, { align: 'right' });
+
+      return tableHeaderY + rowHeight;
+    };
+
+    // Draw a single payment row
+    const drawPaymentRow = (rowY: number, index: number, dateStr: string, displayAmount: number, isAlternate: boolean): void => {
+      // Alternate row background
+      if (isAlternate) {
+        doc.setFillColor(COLORS.surfaceDark[0] * 0.5, COLORS.surfaceDark[1] * 0.5, COLORS.surfaceDark[2] * 0.5);
+        doc.rect(margin, rowY, contentWidth, rowHeight, 'F');
+      }
+
+      doc.setTextColor(...COLORS.textSecondary);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${index + 1}`, margin + 6, rowY + 5.5);
+
+      doc.setTextColor(...COLORS.textPrimary);
+      doc.setFontSize(8);
+      doc.text(dateStr, margin + 25, rowY + 5.5);
+
+      doc.setTextColor(...COLORS.textPrimary);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${symbol}${displayAmount.toLocaleString('en-US')}`, pageWidth - margin - 6, rowY + 5.5, { align: 'right' });
+    };
+
+    // Draw total row
+    const drawTotalRow = (rowY: number, total: number): void => {
+      doc.setFillColor(...COLORS.surfaceDark);
+      doc.rect(margin, rowY, contentWidth, rowHeight, 'F');
+
+      doc.setTextColor(...COLORS.textSecondary);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TOTAL SCHEDULED', margin + 25, rowY + 5.5);
+      doc.setTextColor(...COLORS.primary);
+      doc.setFontSize(8);
+      doc.text(`${symbol}${total.toLocaleString('en-US')}`, pageWidth - margin - 6, rowY + 5.5, { align: 'right' });
+    };
+
+    // Build payment data array
+    const payments: { dateStr: string; amount: number }[] = [];
+
+    if (hasSchedule) {
+      for (const entry of scheduleEntries) {
+        const displayAmount = idrToDisplayNum(entry.amount);
+        totalForDisplay += displayAmount;
+        payments.push({
+          dateStr: new Date(entry.date).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          }),
+          amount: displayAmount,
+        });
+      }
     } else {
-      // Calculate payments (fallback for legacy data)
-      // Use display currency for calculations to avoid rounding issues
+      // Fallback for legacy data
+      totalForDisplay = idrToDisplayNum(remaining);
       const baseDisplayPayment = Math.floor(totalForDisplay / data.payment.installmentMonths);
 
       for (let i = 0; i < data.payment.installmentMonths; i++) {
         const paymentDate = new Date();
         paymentDate.setMonth(paymentDate.getMonth() + i + 1);
-        const dateStr = paymentDate.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        });
 
-        // Last payment gets remainder to ensure exact total
         const isLastPayment = i === data.payment.installmentMonths - 1;
         const previousTotal = baseDisplayPayment * i;
-        const displayAmount = isLastPayment
-          ? totalForDisplay - previousTotal
-          : baseDisplayPayment;
+        const displayAmount = isLastPayment ? totalForDisplay - previousTotal : baseDisplayPayment;
 
-        // Alternate row background
-        if (i % 2 === 0) {
-          doc.setFillColor(COLORS.surfaceDark[0] * 0.5, COLORS.surfaceDark[1] * 0.5, COLORS.surfaceDark[2] * 0.5);
-          doc.rect(margin + 4, rowY, contentWidth - 8, rowHeight, 'F');
-        }
-
-        doc.setTextColor(...COLORS.textSecondary);
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`${i + 1}`, margin + 8, rowY + 5.5);
-
-        doc.setTextColor(...COLORS.textPrimary);
-        doc.text(dateStr, margin + 20, rowY + 5.5);
-
-        doc.setTextColor(...COLORS.textPrimary);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${symbol}${displayAmount.toLocaleString('en-US')}`, pageWidth - margin - 8, rowY + 5.5, { align: 'right' });
-
-        rowY += rowHeight;
+        payments.push({
+          dateStr: paymentDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          }),
+          amount: displayAmount,
+        });
       }
     }
 
-    // Total row
-    doc.setFillColor(...COLORS.surfaceDark);
-    doc.rect(margin + 4, rowY, contentWidth - 8, rowHeight, 'F');
+    // Render payments with automatic page breaks
+    let isFirstPage = true;
+    let rowY = drawScheduleHeader(yPos, isFirstPage);
 
-    doc.setTextColor(...COLORS.textSecondary);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL SCHEDULED', margin + 20, rowY + 5.5);
-    doc.setTextColor(...COLORS.primary);
-    doc.text(`${symbol}${totalForDisplay.toLocaleString('en-US')}`, pageWidth - margin - 8, rowY + 5.5, { align: 'right' });
+    for (let i = 0; i < payments.length; i++) {
+      // Check if we need a new page (leave room for total row + footer)
+      if (rowY + rowHeight * 2 + footerSpace > pageHeight) {
+        // Add new page
+        doc.addPage();
+        doc.setFillColor(...COLORS.background);
+        doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
-    yPos += scheduleCardHeight + 6;
+        isFirstPage = false;
+        yPos = 15;
+        rowY = drawScheduleHeader(yPos, isFirstPage);
+      }
+
+      drawPaymentRow(rowY, i, payments[i].dateStr, payments[i].amount, i % 2 === 0);
+      rowY += rowHeight;
+    }
+
+    // Draw total row
+    drawTotalRow(rowY, totalForDisplay);
+    rowY += rowHeight;
+
+    yPos = rowY + 6;
   } else {
     // Full payment - simple display
     const fullPayCardHeight = 24;
@@ -468,15 +477,23 @@ export function generatePDFReport(options: PDFExportOptions): void {
     yPos += 8;
   }
 
-  // Footer
-  doc.setDrawColor(...COLORS.border);
-  doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+  // Footer on each page
+  const totalPages = doc.getNumberOfPages();
+  for (let page = 1; page <= totalPages; page++) {
+    doc.setPage(page);
 
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(6);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Generated by BaliInvest XIRR Calculator', margin, pageHeight - 8);
-  doc.text('XIRR uses irregular cash flow intervals for accurate annualized returns', pageWidth - margin, pageHeight - 8, { align: 'right' });
+    doc.setDrawColor(...COLORS.border);
+    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+
+    doc.setTextColor(...COLORS.textSecondary);
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Generated by BaliInvest XIRR Calculator', margin, pageHeight - 8);
+
+    if (totalPages > 1) {
+      doc.text(`Page ${page} of ${totalPages}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+    }
+  }
 
   // Save
   const projectName = data.property.projectName || 'Investment';
