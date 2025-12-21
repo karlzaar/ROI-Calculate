@@ -57,10 +57,6 @@ function App() {
     }
   }, [data]);
 
-  const handleCalculate = useCallback(() => {
-    setToast({ message: 'XIRR calculated successfully!', type: 'success' });
-  }, []);
-
   const handleExportPDF = useCallback(() => {
     try {
       generatePDFReport({
@@ -176,7 +172,6 @@ function App() {
                 location={data.property.location}
                 currency={currency}
                 formatAbbrev={formatAbbrev}
-                onCalculate={handleCalculate}
                 onExportPDF={handleExportPDF}
               />
             </div>
