@@ -130,6 +130,13 @@ export function PaymentTerms({ data, totalPriceIDR, symbol, formatDisplay, onUpd
                     year: 'numeric'
                   });
 
+                  // For last installment, add any rounding difference to ensure 100% coverage
+                  const isLastPayment = i === data.installmentMonths - 1;
+                  const previousPaymentsTotal = Math.floor(monthlyIDR) * i;
+                  const thisPaymentAmount = isLastPayment
+                    ? remainingIDR - previousPaymentsTotal
+                    : Math.floor(monthlyIDR);
+
                   return (
                     <div
                       key={i}
@@ -145,7 +152,7 @@ export function PaymentTerms({ data, totalPriceIDR, symbol, formatDisplay, onUpd
                         </span>
                       </div>
                       <div className="col-span-3 text-right font-mono text-white text-sm">
-                        {symbol} {formatDisplay(monthlyIDR)}
+                        {symbol} {formatDisplay(thisPaymentAmount)}
                       </div>
                     </div>
                   );
