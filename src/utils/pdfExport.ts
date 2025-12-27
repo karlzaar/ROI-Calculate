@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import type { InvestmentData, XIRRResult } from '../types/investment';
+import { generatePaymentSchedule } from './xirr';
 
 interface PDFExportOptions {
   data: InvestmentData;
@@ -11,18 +12,28 @@ interface PDFExportOptions {
   rate: number;
 }
 
-// Color palette matching the website
+// Light theme color palette (matching the new design)
 const COLORS = {
-  background: [17, 34, 23] as [number, number, number],
-  surface: [16, 34, 22] as [number, number, number],
-  surfaceDark: [25, 51, 34] as [number, number, number],
-  border: [50, 103, 68] as [number, number, number],
-  primary: [19, 236, 91] as [number, number, number],
-  textPrimary: [255, 255, 255] as [number, number, number],
-  textSecondary: [146, 201, 164] as [number, number, number],
-  cyan: [34, 211, 238] as [number, number, number],
-  red: [248, 113, 113] as [number, number, number],
-  green: [74, 222, 128] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
+  background: [250, 250, 250] as [number, number, number],
+  surface: [255, 255, 255] as [number, number, number],
+  surfaceAlt: [249, 250, 251] as [number, number, number],
+  border: [229, 231, 235] as [number, number, number],
+  borderLight: [243, 244, 246] as [number, number, number],
+  primary: [34, 197, 94] as [number, number, number],  // Green
+  primaryDark: [22, 163, 74] as [number, number, number],
+  textPrimary: [17, 24, 39] as [number, number, number],  // Gray-900
+  textSecondary: [107, 114, 128] as [number, number, number],  // Gray-500
+  textMuted: [156, 163, 175] as [number, number, number],  // Gray-400
+  red: [239, 68, 68] as [number, number, number],
+  redLight: [254, 226, 226] as [number, number, number],
+  green: [34, 197, 94] as [number, number, number],
+  greenLight: [220, 252, 231] as [number, number, number],
+  greenDark: [22, 101, 52] as [number, number, number],
+  orange: [249, 115, 22] as [number, number, number],
+  orangeLight: [255, 237, 213] as [number, number, number],
+  cyan: [6, 182, 212] as [number, number, number],
+  cyanLight: [207, 250, 254] as [number, number, number],
 };
 
 // Helper to truncate text to fit width
@@ -35,486 +46,611 @@ function truncateText(doc: jsPDF, text: string, maxWidth: number): string {
   return truncated + '...';
 }
 
-export function generatePDFReport(options: PDFExportOptions): void {
-  const { data, result, currency, symbol, formatDisplay, formatAbbrev, rate } = options;
+// Calculate Deal Rating based on XIRR
+function getDealRating(xirr: number): { rating: string; color: [number, number, number]; confidence: number } {
+  if (xirr >= 0.25) return { rating: 'Excellent', color: COLORS.green, confidence: 92 };
+  if (xirr >= 0.18) return { rating: 'Very Good', color: COLORS.green, confidence: 85 };
+  if (xirr >= 0.12) return { rating: 'Good', color: COLORS.primaryDark, confidence: 78 };
+  if (xirr >= 0.08) return { rating: 'Fair', color: COLORS.orange, confidence: 70 };
+  if (xirr >= 0) return { rating: 'Below Average', color: COLORS.orange, confidence: 60 };
+  return { rating: 'Poor', color: COLORS.red, confidence: 50 };
+}
 
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.width;
-  const pageHeight = doc.internal.pageSize.height;
-  const margin = 15;
-  const contentWidth = pageWidth - margin * 2;
-  let yPos = 0;
-
-  // Fill entire page with dark background
-  doc.setFillColor(...COLORS.background);
-  doc.rect(0, 0, pageWidth, pageHeight, 'F');
-
-  // Header bar
-  doc.setFillColor(...COLORS.surface);
-  doc.rect(0, 0, pageWidth, 22, 'F');
-  doc.setDrawColor(...COLORS.border);
-  doc.line(0, 22, pageWidth, 22);
-
-  // Logo
-  doc.setFillColor(COLORS.primary[0] * 0.3, COLORS.primary[1] * 0.3, COLORS.primary[2] * 0.3);
-  doc.roundedRect(margin, 5, 12, 12, 2, 2, 'F');
-  doc.setTextColor(...COLORS.primary);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  doc.text('XIRR', margin + 6, 12.5, { align: 'center' });
-
-  // Title
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(12);
-  doc.text('BaliInvest XIRR', margin + 16, 12);
-
-  // Date
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(
-    new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-    pageWidth - margin,
-    12,
-    { align: 'right' }
-  );
-
-  yPos = 30;
-
-  // Main title
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Investment Report', margin, yPos);
-  yPos += 6;
-
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text(truncateText(doc, data.property.projectName || 'Untitled Project', contentWidth), margin, yPos);
-  yPos += 8;
-
-  // XIRR Result Card
-  const xirrCardHeight = 32;
-  doc.setFillColor(...COLORS.surface);
-  doc.roundedRect(margin, yPos, contentWidth, xirrCardHeight, 2, 2, 'F');
-  doc.setDrawColor(...COLORS.border);
-  doc.roundedRect(margin, yPos, contentWidth, xirrCardHeight, 2, 2, 'S');
-
-  const xirrPercent = (result.rate * 100).toFixed(1);
-  const isPositive = result.rate >= 0;
-
-  // Left section - XIRR
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Estimated XIRR', margin + 8, yPos + 10);
-
-  doc.setTextColor(...(isPositive ? COLORS.primary : COLORS.red));
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${xirrPercent}%`, margin + 8, yPos + 22);
-
-  doc.setTextColor(...(isPositive ? COLORS.primary : COLORS.red));
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Annualized', margin + 8, yPos + 27);
-
-  // Right section - metrics in row
-  const metricWidth = 42;
-  const metricStartX = margin + 70;
-
-  // Total Invested
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(7);
-  doc.text('Total Invested', metricStartX, yPos + 10);
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${formatAbbrev(result.totalInvested)} ${currency}`, metricStartX, yPos + 18);
-
-  // Net Profit
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Net Profit', metricStartX + metricWidth, yPos + 10);
-  doc.setTextColor(...(result.netProfit >= 0 ? COLORS.primary : COLORS.red));
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${result.netProfit >= 0 ? '+' : ''}${formatAbbrev(result.netProfit)} ${currency}`, metricStartX + metricWidth, yPos + 18);
-
-  // Investment Period
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Investment Period', metricStartX + metricWidth * 2, yPos + 10);
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${result.holdPeriodMonths} Months`, metricStartX + metricWidth * 2, yPos + 18);
-
-  yPos += xirrCardHeight + 6;
-
-  // Two column layout
-  const colWidth = (contentWidth - 6) / 2;
-  const leftColX = margin;
-  const rightColX = margin + colWidth + 6;
-
-  // Property Details Card - matching dashboard exactly
-  const propCardHeight = 62;
-  doc.setFillColor(...COLORS.surface);
-  doc.roundedRect(leftColX, yPos, colWidth, propCardHeight, 2, 2, 'F');
-  doc.setDrawColor(...COLORS.border);
-  doc.roundedRect(leftColX, yPos, colWidth, propCardHeight, 2, 2, 'S');
-
-  doc.setTextColor(...COLORS.primary);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Property Details', leftColX + 6, yPos + 10);
-
-  const propLabelX = leftColX + 6;
-  const propValueY1 = yPos + 18;
-  const propValueY2 = yPos + 30;
-  const propValueY3 = yPos + 42;
-  const propValueY4 = yPos + 54;
-  const propMaxWidth = colWidth - 12;
-  const propRightCol = propLabelX + propMaxWidth / 2 + 5;
-
-  // Row 1: Project Name
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Project', propLabelX, propValueY1);
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(8);
-  doc.text(truncateText(doc, data.property.projectName || 'Not specified', propMaxWidth), propLabelX, propValueY1 + 5);
-
-  // Row 2: Location
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(7);
-  doc.text('Location', propLabelX, propValueY2);
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(8);
-  doc.text(truncateText(doc, data.property.location || 'Not specified', propMaxWidth), propLabelX, propValueY2 + 5);
-
-  // Row 3: Total Price + Purchase Date
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(7);
-  doc.text('Total Price', propLabelX, propValueY3);
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${symbol}${formatDisplay(data.property.totalPrice)}`, propLabelX, propValueY3 + 5);
-
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Purchase Date', propRightCol, propValueY3);
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(8);
-  const purchaseDateStr = data.property.purchaseDate
-    ? new Date(data.property.purchaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : 'Not set';
-  doc.text(purchaseDateStr, propRightCol, propValueY3 + 5);
-
-  // Row 4: Handover Date
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Handover Date', propLabelX, propValueY4);
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(8);
-  const handoverDateStr = data.property.handoverDate
-    ? new Date(data.property.handoverDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : 'Not set';
-  doc.text(handoverDateStr, propLabelX, propValueY4 + 5);
-
-  // Exit Strategy Card - matching dashboard exactly
-  doc.setFillColor(...COLORS.surface);
-  doc.roundedRect(rightColX, yPos, colWidth, propCardHeight, 2, 2, 'F');
-  doc.setDrawColor(...COLORS.border);
-  doc.roundedRect(rightColX, yPos, colWidth, propCardHeight, 2, 2, 'S');
-
-  // Flip at Completion badge
-  doc.setFillColor(COLORS.cyan[0] * 0.3, COLORS.cyan[1] * 0.3, COLORS.cyan[2] * 0.3);
-  doc.setFontSize(7);
-  const badgeText = 'Flip at Completion';
-  const badgeWidth = doc.getTextWidth(badgeText) + 6;
-  doc.roundedRect(rightColX + 6, yPos + 5, badgeWidth, 8, 1.5, 1.5, 'F');
-  doc.setTextColor(...COLORS.cyan);
-  doc.setFont('helvetica', 'bold');
-  doc.text(badgeText, rightColX + 9, yPos + 10.5);
+// Generate AI summary text
+function generateAISummary(
+  data: InvestmentData,
+  result: XIRRResult,
+  symbol: string,
+  formatDisplay: (idr: number) => string,
+  pricePerSqm: number
+): string {
+  const xirr = (result.rate * 100).toFixed(1);
+  const years = (result.holdPeriodMonths / 12).toFixed(1);
+  const location = data.property.location || 'the selected area';
+  const projectName = data.property.projectName || 'This property';
 
   const appreciation = data.property.totalPrice > 0
     ? ((data.exit.projectedSalesPrice - data.property.totalPrice) / data.property.totalPrice) * 100
     : 0;
-  const closingCosts = data.exit.projectedSalesPrice * (data.exit.closingCostPercent / 100);
-  const exitRightCol = rightColX + colWidth / 2;
 
-  // Row 1: Sale Price + Appreciation
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Projected Sale Price', rightColX + 6, propValueY1 + 2);
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${symbol}${formatDisplay(data.exit.projectedSalesPrice)}`, rightColX + 6, propValueY1 + 7);
-
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Appreciation', exitRightCol, propValueY1 + 2);
-  doc.setTextColor(...(appreciation >= 0 ? COLORS.green : COLORS.red));
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${appreciation >= 0 ? '+' : ''}${appreciation.toFixed(1)}%`, exitRightCol, propValueY1 + 7);
-
-  // Row 2: Sale Date (= handover for flip strategy)
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Sale Date', rightColX + 6, propValueY2 + 2);
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(8);
-  // Sale date = handover date for flip at completion
-  const saleDateStr = data.property.handoverDate
-    ? new Date(data.property.handoverDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : 'Set handover date';
-  doc.text(saleDateStr, rightColX + 6, propValueY2 + 7);
-
-  // Row 3: Closing Costs
-  doc.setTextColor(...COLORS.textSecondary);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Closing Costs (${data.exit.closingCostPercent}%)`, rightColX + 6, propValueY3 + 2);
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(8);
-  doc.text(`${symbol}${formatDisplay(closingCosts)}`, rightColX + 6, propValueY3 + 7);
-
-  yPos += propCardHeight + 6;
-
-  // Payment Schedule Card (with individual rows, multi-page support)
-  if (data.payment.type === 'plan') {
-    const downPayment = data.property.totalPrice * (data.payment.downPaymentPercent / 100);
-    const remaining = data.property.totalPrice - downPayment;
-
-    // Use schedule data if available, otherwise calculate
-    const hasSchedule = data.payment.schedule && data.payment.schedule.length > 0;
-    const scheduleEntries = hasSchedule ? data.payment.schedule : [];
-
-    // Original row height for readability
-    const rowHeight = 8;
-    const headerHeight = 22;
-    const footerSpace = 25;
-
-    // Helper to convert IDR to display currency
-    const idrToDisplayNum = (idr: number): number => Math.round(idr / rate);
-    let totalForDisplay = 0;
-
-    // Draw schedule header
-    const drawScheduleHeader = (startY: number, isFirstPage: boolean): number => {
-      doc.setFillColor(...COLORS.surface);
-      doc.setDrawColor(...COLORS.border);
-
-      doc.setTextColor(...COLORS.primary);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text(isFirstPage ? 'Payment Schedule' : 'Payment Schedule (continued)', margin + 6, startY + 10);
-
-      if (isFirstPage) {
-        // Down payment info only on first page
-        doc.setTextColor(...COLORS.textSecondary);
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Down Payment: ${data.payment.downPaymentPercent}% (${symbol}${formatDisplay(downPayment)})`, margin + 6, startY + 18);
-      }
-
-      // Table header
-      const tableHeaderY = startY + headerHeight;
-      doc.setFillColor(...COLORS.surfaceDark);
-      doc.rect(margin, tableHeaderY, contentWidth, rowHeight, 'F');
-
-      doc.setTextColor(...COLORS.textSecondary);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'bold');
-      doc.text('#', margin + 6, tableHeaderY + 5.5);
-      doc.text('DUE DATE', margin + 25, tableHeaderY + 5.5);
-      doc.text('AMOUNT', pageWidth - margin - 6, tableHeaderY + 5.5, { align: 'right' });
-
-      return tableHeaderY + rowHeight;
-    };
-
-    // Draw a single payment row
-    const drawPaymentRow = (rowY: number, index: number, dateStr: string, displayAmount: number, isAlternate: boolean): void => {
-      // Alternate row background
-      if (isAlternate) {
-        doc.setFillColor(COLORS.surfaceDark[0] * 0.5, COLORS.surfaceDark[1] * 0.5, COLORS.surfaceDark[2] * 0.5);
-        doc.rect(margin, rowY, contentWidth, rowHeight, 'F');
-      }
-
-      doc.setTextColor(...COLORS.textSecondary);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`${index + 1}`, margin + 6, rowY + 5.5);
-
-      doc.setTextColor(...COLORS.textPrimary);
-      doc.setFontSize(8);
-      doc.text(dateStr, margin + 25, rowY + 5.5);
-
-      doc.setTextColor(...COLORS.textPrimary);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${symbol}${displayAmount.toLocaleString('en-US')}`, pageWidth - margin - 6, rowY + 5.5, { align: 'right' });
-    };
-
-    // Draw total row
-    const drawTotalRow = (rowY: number, total: number): void => {
-      doc.setFillColor(...COLORS.surfaceDark);
-      doc.rect(margin, rowY, contentWidth, rowHeight, 'F');
-
-      doc.setTextColor(...COLORS.textSecondary);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'bold');
-      doc.text('TOTAL SCHEDULED', margin + 25, rowY + 5.5);
-      doc.setTextColor(...COLORS.primary);
-      doc.setFontSize(8);
-      doc.text(`${symbol}${total.toLocaleString('en-US')}`, pageWidth - margin - 6, rowY + 5.5, { align: 'right' });
-    };
-
-    // Build payment data array
-    const payments: { dateStr: string; amount: number }[] = [];
-
-    // Calculate total in IDR first, then convert once (avoids rounding errors)
-    const totalIDR = hasSchedule
-      ? scheduleEntries.reduce((sum, entry) => sum + entry.amount, 0)
-      : remaining;
-    totalForDisplay = idrToDisplayNum(totalIDR);
-
-    if (hasSchedule) {
-      // Pre-calculate display amounts so they sum correctly to the total
-      // Last payment gets adjusted to absorb rounding differences
-      let runningSum = 0;
-
-      for (let i = 0; i < scheduleEntries.length; i++) {
-        const entry = scheduleEntries[i];
-        const isLast = i === scheduleEntries.length - 1;
-
-        // Last payment = total minus sum of previous displayed amounts
-        const displayAmount = isLast
-          ? totalForDisplay - runningSum
-          : idrToDisplayNum(entry.amount);
-
-        if (!isLast) {
-          runningSum += displayAmount;
-        }
-
-        payments.push({
-          dateStr: new Date(entry.date).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          }),
-          amount: displayAmount,
-        });
-      }
-    } else {
-      // Fallback for legacy data
-      const baseDisplayPayment = Math.floor(totalForDisplay / data.payment.installmentMonths);
-
-      for (let i = 0; i < data.payment.installmentMonths; i++) {
-        const paymentDate = new Date();
-        paymentDate.setMonth(paymentDate.getMonth() + i + 1);
-
-        const isLastPayment = i === data.payment.installmentMonths - 1;
-        const previousTotal = baseDisplayPayment * i;
-        const displayAmount = isLastPayment ? totalForDisplay - previousTotal : baseDisplayPayment;
-
-        payments.push({
-          dateStr: paymentDate.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          }),
-          amount: displayAmount,
-        });
-      }
-    }
-
-    // Render payments with automatic page breaks
-    let isFirstPage = true;
-    let rowY = drawScheduleHeader(yPos, isFirstPage);
-
-    for (let i = 0; i < payments.length; i++) {
-      // Check if we need a new page (leave room for total row + footer)
-      if (rowY + rowHeight * 2 + footerSpace > pageHeight) {
-        // Add new page
-        doc.addPage();
-        doc.setFillColor(...COLORS.background);
-        doc.rect(0, 0, pageWidth, pageHeight, 'F');
-
-        isFirstPage = false;
-        yPos = 15;
-        rowY = drawScheduleHeader(yPos, isFirstPage);
-      }
-
-      drawPaymentRow(rowY, i, payments[i].dateStr, payments[i].amount, i % 2 === 0);
-      rowY += rowHeight;
-    }
-
-    // Draw total row
-    drawTotalRow(rowY, totalForDisplay);
-    rowY += rowHeight;
-
-    yPos = rowY + 6;
+  let strategy = '';
+  if (data.exit.strategyType === 'flip') {
+    strategy = 'likely targeting a flip upon construction completion';
+  } else if (data.exit.strategyType === 'rent-resell') {
+    strategy = 'planning to generate rental income before resale';
   } else {
-    // Full payment - simple display
-    const fullPayCardHeight = 24;
-    doc.setFillColor(...COLORS.surface);
-    doc.roundedRect(margin, yPos, contentWidth, fullPayCardHeight, 2, 2, 'F');
-    doc.setDrawColor(...COLORS.border);
-    doc.roundedRect(margin, yPos, contentWidth, fullPayCardHeight, 2, 2, 'S');
-
-    doc.setTextColor(...COLORS.primary);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Payment', margin + 6, yPos + 10);
-
-    doc.setTextColor(...COLORS.textPrimary);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Full Payment: ${symbol}${formatDisplay(data.property.totalPrice)}`, margin + 6, yPos + 18);
-
-    yPos += fullPayCardHeight + 6;
+    strategy = 'focusing on long-term rental yield';
   }
 
-  // Exchange rate note if not IDR
-  if (currency !== 'IDR') {
+  return `${projectName} in ${location} presents a ${result.rate >= 0.15 ? 'high-alpha' : 'moderate'} investment profile. The projected XIRR of ${xirr}% over a ${years}-year horizon indicates a ${result.rate >= 0.2 ? 'robust' : 'reasonable'} short-term capital appreciation play, ${strategy}. At ${symbol}${formatDisplay(Math.round(pricePerSqm * (data.property.currency === 'IDR' ? 1 : 1)))} per sqm, the entry point is ${appreciation >= 25 ? 'highly competitive' : 'reasonable'} for this region.`;
+}
+
+// Get market risk assessment
+function getMarketRisk(holdPeriodMonths: number, appreciation: number): string {
+  if (holdPeriodMonths <= 18 && appreciation <= 30) return 'Low';
+  if (holdPeriodMonths <= 24 && appreciation <= 40) return 'Moderate';
+  return 'High';
+}
+
+// Draw rounded rectangle helper
+function drawRoundedRect(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+  fill: boolean = true,
+  stroke: boolean = false
+) {
+  doc.roundedRect(x, y, w, h, r, r, fill ? (stroke ? 'FD' : 'F') : 'S');
+}
+
+export function generatePDFReport(options: PDFExportOptions): void {
+  const { data, result, currency, symbol, formatDisplay, rate } = options;
+
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
+  const margin = 12;
+  const contentWidth = pageWidth - margin * 2;
+  let yPos = margin;
+
+  // Calculate derived values
+  const pricePerSqm = data.property.propertySize > 0
+    ? Math.round(data.property.totalPrice / data.property.propertySize / rate)
+    : 0;
+  const totalROI = result.totalInvested > 0
+    ? (result.netProfit / result.totalInvested) * 100
+    : 0;
+  const appreciation = data.property.totalPrice > 0
+    ? ((data.exit.projectedSalesPrice - data.property.totalPrice) / data.property.totalPrice) * 100
+    : 0;
+  const closingCosts = data.exit.projectedSalesPrice * (data.exit.closingCostPercent / 100);
+  const netProceeds = data.exit.projectedSalesPrice - closingCosts;
+  const dealRating = getDealRating(result.rate);
+  const marketRisk = getMarketRisk(result.holdPeriodMonths, appreciation);
+
+  // Convert IDR to display currency
+  const toDisplay = (idr: number): number => Math.round(idr / rate);
+
+  // ============================================
+  // PAGE BACKGROUND
+  // ============================================
+  doc.setFillColor(...COLORS.background);
+  doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+  // ============================================
+  // HEADER SECTION
+  // ============================================
+
+  // CONFIDENTIAL badge
+  doc.setFillColor(...COLORS.orangeLight);
+  doc.roundedRect(margin, yPos, 28, 5, 1, 1, 'F');
+  doc.setTextColor(...COLORS.orange);
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CONFIDENTIAL', margin + 14, yPos + 3.5, { align: 'center' });
+
+  // INVESTMENT REPORT label
+  doc.setTextColor(...COLORS.textSecondary);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.text('INVESTMENT REPORT', margin + 32, yPos + 3.5);
+
+  // Generated date (right side)
+  doc.setTextColor(...COLORS.textMuted);
+  doc.setFontSize(6);
+  doc.text('GENERATED ON', pageWidth - margin, yPos + 2, { align: 'right' });
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  doc.text(dateStr, pageWidth - margin, yPos + 6, { align: 'right' });
+  doc.setTextColor(...COLORS.textSecondary);
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Base Currency: ${currency}`, pageWidth - margin, yPos + 10, { align: 'right' });
+
+  yPos += 10;
+
+  // Project Name (large)
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text(truncateText(doc, data.property.projectName || 'Untitled Project', contentWidth * 0.6), margin, yPos);
+  yPos += 6;
+
+  // Location and property size
+  doc.setTextColor(...COLORS.textSecondary);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  const locationText = `📍 ${data.property.location || 'Location not set'}`;
+  const sizeText = data.property.propertySize > 0 ? ` · ${data.property.propertySize} m² Property` : '';
+  doc.text(locationText + sizeText, margin, yPos);
+  yPos += 10;
+
+  // ============================================
+  // KEY METRICS ROW (5 boxes)
+  // ============================================
+  const metricBoxWidth = (contentWidth - 8) / 5;
+  const metricBoxHeight = 28;
+
+  doc.setFillColor(...COLORS.surface);
+  drawRoundedRect(doc, margin, yPos, contentWidth, metricBoxHeight, 3, true, false);
+  doc.setDrawColor(...COLORS.border);
+  doc.roundedRect(margin, yPos, contentWidth, metricBoxHeight, 3, 3, 'S');
+
+  const metrics = [
+    {
+      label: 'PROJECTED XIRR',
+      value: `${(result.rate * 100).toFixed(1)}%`,
+      subtitle: 'Internal Rate of Return',
+      color: result.rate >= 0 ? COLORS.green : COLORS.red
+    },
+    {
+      label: 'NET PROFIT',
+      value: `${result.netProfit >= 0 ? '+' : ''}${symbol}${toDisplay(Math.abs(result.netProfit)).toLocaleString()}`,
+      subtitle: 'Total Gain on Exit',
+      color: COLORS.textPrimary
+    },
+    {
+      label: 'TOTAL ROI',
+      value: `${totalROI.toFixed(1)}%`,
+      subtitle: 'Return on Investment',
+      color: COLORS.textPrimary
+    },
+    {
+      label: 'TOTAL INVESTMENT',
+      value: `${symbol}${toDisplay(result.totalInvested).toLocaleString()}`,
+      subtitle: 'Including Fees',
+      color: COLORS.textPrimary
+    },
+    {
+      label: 'INV. PERIOD',
+      value: `${(result.holdPeriodMonths / 12).toFixed(1)} Yrs`,
+      subtitle: `${Math.floor(result.holdPeriodMonths / 12)} Year${Math.floor(result.holdPeriodMonths / 12) !== 1 ? 's' : ''} ${result.holdPeriodMonths % 12} Months`,
+      color: COLORS.textPrimary
+    },
+  ];
+
+  metrics.forEach((metric, i) => {
+    const boxX = margin + 2 + i * metricBoxWidth;
+
+    // Divider line (except first)
+    if (i > 0) {
+      doc.setDrawColor(...COLORS.borderLight);
+      doc.line(boxX - 1, yPos + 5, boxX - 1, yPos + metricBoxHeight - 5);
+    }
+
+    doc.setTextColor(...COLORS.textMuted);
+    doc.setFontSize(5.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(metric.label, boxX + 2, yPos + 7);
+
+    doc.setTextColor(...metric.color);
+    doc.setFontSize(i === 0 ? 14 : 11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(metric.value, boxX + 2, yPos + 16);
+
+    doc.setTextColor(...COLORS.textMuted);
+    doc.setFontSize(5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(metric.subtitle, boxX + 2, yPos + 22);
+  });
+
+  yPos += metricBoxHeight + 6;
+
+  // ============================================
+  // AI DEAL ANALYZER SUMMARY
+  // ============================================
+  const aiCardHeight = 42;
+  doc.setFillColor(...COLORS.surface);
+  drawRoundedRect(doc, margin, yPos, contentWidth, aiCardHeight, 3);
+  doc.setDrawColor(...COLORS.border);
+  doc.roundedRect(margin, yPos, contentWidth, aiCardHeight, 3, 3, 'S');
+
+  // Left section - Deal Rating
+  const ratingBoxWidth = 42;
+  doc.setFillColor(...COLORS.surfaceAlt);
+  drawRoundedRect(doc, margin + 4, yPos + 4, ratingBoxWidth, aiCardHeight - 8, 2);
+
+  // Rating icon (simple circle with checkmark)
+  doc.setFillColor(...COLORS.greenLight);
+  doc.circle(margin + 4 + ratingBoxWidth / 2, yPos + 14, 6, 'F');
+  doc.setTextColor(...COLORS.green);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('✓', margin + 4 + ratingBoxWidth / 2, yPos + 16, { align: 'center' });
+
+  doc.setTextColor(...COLORS.textMuted);
+  doc.setFontSize(5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('DEAL RATING', margin + 4 + ratingBoxWidth / 2, yPos + 24, { align: 'center' });
+
+  doc.setTextColor(...dealRating.color);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(dealRating.rating, margin + 4 + ratingBoxWidth / 2, yPos + 31, { align: 'center' });
+
+  doc.setTextColor(...COLORS.textMuted);
+  doc.setFontSize(5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`AI Confidence: ${dealRating.confidence}%`, margin + 4 + ratingBoxWidth / 2, yPos + 36, { align: 'center' });
+
+  // Right section - Summary
+  const summaryX = margin + ratingBoxWidth + 12;
+  const summaryWidth = contentWidth - ratingBoxWidth - 16;
+
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('AI Deal Analyzer Summary', summaryX, yPos + 10);
+
+  // BETA badge
+  doc.setFillColor(...COLORS.border);
+  doc.roundedRect(summaryX + doc.getTextWidth('AI Deal Analyzer Summary') + 2, yPos + 6, 12, 5, 1, 1, 'F');
+  doc.setTextColor(...COLORS.textSecondary);
+  doc.setFontSize(5);
+  doc.text('BETA', summaryX + doc.getTextWidth('AI Deal Analyzer Summary') + 8, yPos + 9.5, { align: 'center' });
+
+  // Summary text
+  doc.setTextColor(...COLORS.textSecondary);
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'normal');
+  const summaryText = generateAISummary(data, result, symbol, formatDisplay, pricePerSqm);
+  const splitSummary = doc.splitTextToSize(summaryText, summaryWidth);
+  doc.text(splitSummary.slice(0, 3), summaryX, yPos + 16);
+
+  // Tags row
+  const tagY = yPos + aiCardHeight - 8;
+  const tags = [
+    { icon: '↗', text: appreciation >= 20 ? 'High Appreciation Potential' : 'Moderate Appreciation', color: COLORS.green },
+    { icon: '⏱', text: `Inv. Period: ${Math.floor(result.holdPeriodMonths / 12)} Year${Math.floor(result.holdPeriodMonths / 12) !== 1 ? 's' : ''} ${result.holdPeriodMonths % 12} Months`, color: COLORS.textSecondary },
+    { icon: '⚠', text: `Market Risk: ${marketRisk}`, color: marketRisk === 'Low' ? COLORS.green : (marketRisk === 'Moderate' ? COLORS.orange : COLORS.red) },
+  ];
+
+  let tagX = summaryX;
+  tags.forEach((tag) => {
+    const tagWidth = doc.getTextWidth(tag.text) + 10;
+    doc.setFillColor(...COLORS.surfaceAlt);
+    doc.roundedRect(tagX, tagY, tagWidth, 5, 1, 1, 'F');
+    doc.setTextColor(...tag.color);
+    doc.setFontSize(5);
+    doc.text(`${tag.icon}  ${tag.text}`, tagX + 2, tagY + 3.5);
+    tagX += tagWidth + 3;
+  });
+
+  yPos += aiCardHeight + 6;
+
+  // ============================================
+  // TWO COLUMN LAYOUT - ACQUISITION & EXIT
+  // ============================================
+  const colWidth = (contentWidth - 6) / 2;
+  const detailsCardHeight = 52;
+
+  // LEFT: Acquisition Details
+  doc.setFillColor(...COLORS.surface);
+  drawRoundedRect(doc, margin, yPos, colWidth, detailsCardHeight, 3);
+  doc.setDrawColor(...COLORS.border);
+  doc.roundedRect(margin, yPos, colWidth, detailsCardHeight, 3, 3, 'S');
+
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('🏠  Acquisition Details', margin + 6, yPos + 10);
+
+  const acqDetails = [
+    { label: 'Purchase Price', value: `${symbol} ${toDisplay(data.property.totalPrice).toLocaleString()}` },
+    { label: 'Price per sqm', value: pricePerSqm > 0 ? `${symbol} ${pricePerSqm.toLocaleString()} / m²` : 'N/A' },
+    { label: 'Purchase Date', value: data.property.purchaseDate ? new Date(data.property.purchaseDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-') : 'Not set' },
+    { label: 'Completion Date', value: data.property.handoverDate ? new Date(data.property.handoverDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-') : 'Not set' },
+    { label: 'Booking Fee', value: `${symbol} ${toDisplay(data.payment.bookingFee).toLocaleString()}` },
+  ];
+
+  acqDetails.forEach((item, i) => {
+    const rowY = yPos + 16 + i * 7;
     doc.setTextColor(...COLORS.textSecondary);
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Exchange Rate: 1 ${currency} = ${rate.toLocaleString()} IDR`, margin, yPos);
-    yPos += 8;
-  }
+    doc.text(item.label, margin + 6, rowY);
+    doc.setTextColor(...COLORS.textPrimary);
+    doc.setFont('helvetica', 'bold');
+    doc.text(item.value, margin + colWidth - 6, rowY, { align: 'right' });
+  });
 
-  // Footer on each page
-  const totalPages = doc.getNumberOfPages();
-  for (let page = 1; page <= totalPages; page++) {
-    doc.setPage(page);
+  // RIGHT: Exit Strategy
+  const rightColX = margin + colWidth + 6;
+  doc.setFillColor(...COLORS.surface);
+  drawRoundedRect(doc, rightColX, yPos, colWidth, detailsCardHeight, 3);
+  doc.setDrawColor(...COLORS.border);
+  doc.roundedRect(rightColX, yPos, colWidth, detailsCardHeight, 3, 3, 'S');
 
-    doc.setDrawColor(...COLORS.border);
-    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('↗  Exit Strategy', rightColX + 6, yPos + 10);
+
+  // Gross Sale Price box
+  doc.setFillColor(...COLORS.surfaceAlt);
+  drawRoundedRect(doc, rightColX + 6, yPos + 14, (colWidth - 18) / 2, 14, 2);
+  doc.setTextColor(...COLORS.textMuted);
+  doc.setFontSize(5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Gross Sale Price', rightColX + 8, yPos + 18);
+  doc.setTextColor(...COLORS.green);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${symbol} ${toDisplay(data.exit.projectedSalesPrice).toLocaleString()}`, rightColX + 8, yPos + 24);
+
+  // Closing Costs box
+  const closingBoxX = rightColX + 6 + (colWidth - 18) / 2 + 4;
+  doc.setFillColor(...COLORS.surfaceAlt);
+  drawRoundedRect(doc, closingBoxX, yPos + 14, (colWidth - 18) / 2, 14, 2);
+  doc.setTextColor(...COLORS.textMuted);
+  doc.setFontSize(5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Closing Costs', closingBoxX + 2, yPos + 18);
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${symbol} ${toDisplay(closingCosts).toLocaleString()}`, closingBoxX + 2, yPos + 24);
+  doc.setTextColor(...COLORS.textMuted);
+  doc.setFontSize(5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${data.exit.closingCostPercent}% Total Expenses`, closingBoxX + 2, yPos + 27);
+
+  // Net Proceeds row
+  doc.setFillColor(...COLORS.greenLight);
+  drawRoundedRect(doc, rightColX + 6, yPos + 32, colWidth - 12, 12, 2);
+  doc.setTextColor(...COLORS.greenDark);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Net Proceeds from Sale', rightColX + 10, yPos + 40);
+  doc.setFontSize(10);
+  doc.text(`${symbol} ${toDisplay(netProceeds).toLocaleString()}`, rightColX + colWidth - 10, yPos + 40, { align: 'right' });
+
+  yPos += detailsCardHeight + 6;
+
+  // ============================================
+  // TWO COLUMN LAYOUT - PAYMENT & CASH FLOW CHART
+  // ============================================
+  const paymentCardHeight = 50;
+
+  // LEFT: Payment Structure
+  doc.setFillColor(...COLORS.surface);
+  drawRoundedRect(doc, margin, yPos, colWidth, paymentCardHeight, 3);
+  doc.setDrawColor(...COLORS.border);
+  doc.roundedRect(margin, yPos, colWidth, paymentCardHeight, 3, 3, 'S');
+
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('💳  Payment Structure', margin + 6, yPos + 10);
+
+  const downPayment = data.property.totalPrice * (data.payment.downPaymentPercent / 100);
+  const remaining = data.property.totalPrice - downPayment;
+  const installmentCount = data.payment.installmentMonths;
+  const monthlyPayment = installmentCount > 0 ? remaining / installmentCount : 0;
+
+  // Down Payment
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Down Payment', margin + 6, yPos + 20);
+  doc.setTextColor(...COLORS.textSecondary);
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${data.payment.downPaymentPercent}% upfront`, margin + 6, yPos + 25);
+
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${symbol} ${toDisplay(downPayment).toLocaleString()}`, margin + colWidth - 6, yPos + 22, { align: 'right' });
+
+  // Progress bar
+  const barWidth = colWidth - 12;
+  const barY = yPos + 28;
+  doc.setFillColor(...COLORS.borderLight);
+  drawRoundedRect(doc, margin + 6, barY, barWidth, 3, 1);
+  doc.setFillColor(...COLORS.green);
+  drawRoundedRect(doc, margin + 6, barY, barWidth * (data.payment.downPaymentPercent / 100), 3, 1);
+
+  // Monthly Installments
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Monthly Installments', margin + 6, yPos + 38);
+  doc.setTextColor(...COLORS.textSecondary);
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${installmentCount} Months x ${symbol} ${toDisplay(monthlyPayment).toLocaleString()}`, margin + 6, yPos + 43);
+
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${symbol} ${toDisplay(remaining).toLocaleString()}`, margin + colWidth - 6, yPos + 40, { align: 'right' });
+
+  // RIGHT: Cash Flow Projection Chart
+  doc.setFillColor(...COLORS.surface);
+  drawRoundedRect(doc, rightColX, yPos, colWidth, paymentCardHeight, 3);
+  doc.setDrawColor(...COLORS.border);
+  doc.roundedRect(rightColX, yPos, colWidth, paymentCardHeight, 3, 3, 'S');
+
+  doc.setTextColor(...COLORS.textMuted);
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CASH FLOW PROJECTION', rightColX + 6, yPos + 8);
+
+  // Simple bar chart
+  const chartX = rightColX + 10;
+  const chartY = yPos + 14;
+  const chartWidth = colWidth - 20;
+  const chartHeight = 28;
+  const barSpacing = chartWidth / 4;
+
+  // Calculate scale
+  const maxOutflow = Math.abs(result.totalInvested);
+  const maxInflow = netProceeds;
+  const maxValue = Math.max(maxOutflow, maxInflow);
+
+  // Baseline
+  const baselineY = chartY + chartHeight - 5;
+  doc.setDrawColor(...COLORS.borderLight);
+  doc.setLineDashPattern([1, 1], 0);
+  doc.line(chartX, baselineY, chartX + chartWidth, baselineY);
+  doc.setLineDashPattern([], 0);
+
+  // Bars
+  const phases = [
+    { label: 'Start', value: -downPayment, isNegative: true },
+    { label: 'Pay', value: -remaining, isNegative: true },
+    { label: 'Hold', value: 0, isNegative: false },
+    { label: 'Exit', value: netProceeds, isNegative: false },
+  ];
+
+  phases.forEach((phase, i) => {
+    const barX = chartX + i * barSpacing + barSpacing / 4;
+    const barW = barSpacing / 2;
+
+    if (phase.value !== 0) {
+      const barH = Math.abs(phase.value) / maxValue * (chartHeight - 10);
+      const barY = phase.isNegative ? baselineY - barH : baselineY - barH;
+
+      doc.setFillColor(...(phase.isNegative ? COLORS.redLight : COLORS.greenLight));
+      drawRoundedRect(doc, barX, barY, barW, barH, 1);
+      doc.setFillColor(...(phase.isNegative ? COLORS.red : COLORS.green));
+      drawRoundedRect(doc, barX, barY, barW, 2, 0.5);
+    }
+
+    // Label
+    doc.setTextColor(...COLORS.textMuted);
+    doc.setFontSize(5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(phase.label, barX + barW / 2, chartY + chartHeight, { align: 'center' });
+  });
+
+  yPos += paymentCardHeight + 6;
+
+  // ============================================
+  // CASH FLOW TIMELINE
+  // ============================================
+  const cashFlows = generatePaymentSchedule(data);
+  const timelineCardHeight = Math.min(8 + cashFlows.length * 6 + 8, 60);
+
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Cash Flow Timeline', margin, yPos + 4);
+  yPos += 8;
+
+  doc.setFillColor(...COLORS.surface);
+  drawRoundedRect(doc, margin, yPos, contentWidth, timelineCardHeight, 3);
+  doc.setDrawColor(...COLORS.border);
+  doc.roundedRect(margin, yPos, contentWidth, timelineCardHeight, 3, 3, 'S');
+
+  // Table header
+  const colWidths = [35, 50, 35, 35, 35];
+  let tableX = margin + 4;
+  const headers = ['DATE', 'EVENT', 'INFLOW', 'OUTFLOW', 'NET FLOW'];
+
+  doc.setFillColor(...COLORS.surfaceAlt);
+  doc.rect(margin + 2, yPos + 2, contentWidth - 4, 6, 'F');
+
+  headers.forEach((header, i) => {
+    doc.setTextColor(...COLORS.textMuted);
+    doc.setFontSize(5);
+    doc.setFont('helvetica', 'bold');
+    doc.text(header, tableX, yPos + 6);
+    tableX += colWidths[i];
+  });
+
+  // Table rows (limited to fit on page)
+  let runningTotal = 0;
+  const maxRows = Math.min(cashFlows.length, 7);
+
+  cashFlows.slice(0, maxRows).forEach((cf, i) => {
+    const rowY = yPos + 10 + i * 6;
+    tableX = margin + 4;
+    runningTotal += cf.amount;
+
+    const dateStr = cf.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const isInflow = cf.amount > 0;
+    const eventName = isInflow ? 'Exit/Sale' : (i === 0 ? 'Down Payment' : 'Installment');
 
     doc.setTextColor(...COLORS.textSecondary);
     doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.text('Generated by BaliInvest XIRR Calculator', margin, pageHeight - 8);
+    doc.text(dateStr, tableX, rowY);
+    tableX += colWidths[0];
 
-    if (totalPages > 1) {
-      doc.text(`Page ${page} of ${totalPages}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
-    }
+    doc.setTextColor(...COLORS.textPrimary);
+    doc.text(eventName, tableX, rowY);
+    tableX += colWidths[1];
+
+    // Inflow
+    doc.setTextColor(...COLORS.green);
+    doc.text(isInflow ? `${symbol}${toDisplay(cf.amount).toLocaleString()}` : '-', tableX, rowY);
+    tableX += colWidths[2];
+
+    // Outflow
+    doc.setTextColor(...COLORS.red);
+    doc.text(!isInflow ? `${symbol}${toDisplay(Math.abs(cf.amount)).toLocaleString()}` : '-', tableX, rowY);
+    tableX += colWidths[3];
+
+    // Net Flow
+    doc.setTextColor(...(runningTotal >= 0 ? COLORS.green : COLORS.red));
+    doc.text(`${symbol}${toDisplay(runningTotal).toLocaleString()}`, tableX, rowY);
+  });
+
+  if (cashFlows.length > maxRows) {
+    doc.setTextColor(...COLORS.textMuted);
+    doc.setFontSize(5);
+    doc.text(`... and ${cashFlows.length - maxRows} more entries`, margin + 4, yPos + 10 + maxRows * 6);
   }
 
-  // Save
+  yPos += timelineCardHeight + 6;
+
+  // ============================================
+  // FOOTER
+  // ============================================
+  const footerY = pageHeight - 10;
+  doc.setDrawColor(...COLORS.border);
+  doc.line(margin, footerY - 4, pageWidth - margin, footerY - 4);
+
+  doc.setTextColor(...COLORS.textMuted);
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Generated by BaliInvest XIRR Calculator', margin, footerY);
+
+  // Exchange rate note
+  if (currency !== 'IDR') {
+    doc.text(`Exchange Rate: 1 ${currency} = ${rate.toLocaleString()} IDR`, pageWidth - margin, footerY, { align: 'right' });
+  }
+
+  // ============================================
+  // SAVE PDF
+  // ============================================
   const projectName = data.property.projectName || 'Investment';
   const fileName = `BaliInvest_${projectName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(fileName);

@@ -2,6 +2,7 @@ export interface PropertyDetails {
   projectName: string;
   location: string;
   totalPrice: number;  // Always stored in IDR
+  propertySize: number;  // Size in square meters (sqm)
   purchaseDate: string;
   handoverDate: string;
   currency: 'IDR' | 'USD' | 'AUD' | 'EUR';
@@ -18,6 +19,7 @@ export interface PaymentTerms {
   downPaymentPercent: number;
   installmentMonths: number;
   schedule: PaymentScheduleEntry[];  // Individual payment entries
+  bookingFee: number;  // Initial booking fee in IDR (paid upfront, separate from down payment)
 }
 
 export type ExitStrategyType = 'flip' | 'rent-resell' | 'milk-cow';

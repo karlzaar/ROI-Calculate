@@ -12,6 +12,8 @@ interface Props {
   onUpdateScheduleEntry: (id: string, updates: Partial<Pick<PaymentScheduleEntry, 'date' | 'amount'>>) => void;
 }
 
+// Note: idrToDisplay is already in props, but wasn't used before booking fee was added
+
 export function PaymentTerms({
   data,
   totalPriceIDR,
@@ -258,6 +260,35 @@ export function PaymentTerms({
           <p className="text-sm text-text-secondary mt-2">Full payment required at contract signing.</p>
         </div>
       )}
+
+      {/* Booking Fee Section */}
+      <div className="mt-8 pt-6 border-t border-border-dark">
+        <label className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-lg">receipt_long</span>
+            <span className="text-sm font-medium text-text-secondary">Booking Fee (Optional)</span>
+          </div>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary font-mono">
+              {symbol}
+            </span>
+            <input
+              type="text"
+              value={idrToDisplay(data.bookingFee) > 0 ? formatNumber(idrToDisplay(data.bookingFee)) : ''}
+              onChange={(e) => {
+                const displayValue = parseAmountInput(e.target.value);
+                const idrValue = displayToIdr(displayValue);
+                onUpdate('bookingFee', idrValue);
+              }}
+              placeholder="0"
+              className="w-full rounded-lg bg-surface-dark border border-border-dark px-4 py-3 pl-12 text-white font-mono placeholder:text-text-secondary/50 focus:border-primary focus:outline-none"
+            />
+          </div>
+          <p className="text-xs text-text-secondary/70">
+            Initial fee paid to secure the property. Usually refundable or deducted from total price.
+          </p>
+        </label>
+      </div>
     </section>
   );
 }

@@ -11,6 +11,7 @@ const DEFAULT_INVESTMENT: InvestmentData = {
     projectName: '',
     location: '',
     totalPrice: 0,
+    propertySize: 0,
     purchaseDate: '',
     handoverDate: '',
     currency: 'IDR'
@@ -19,7 +20,8 @@ const DEFAULT_INVESTMENT: InvestmentData = {
     type: 'plan',
     downPaymentPercent: 50,
     installmentMonths: 6,
-    schedule: []
+    schedule: [],
+    bookingFee: 0
   },
   exit: {
     strategyType: 'flip',

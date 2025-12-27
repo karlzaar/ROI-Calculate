@@ -89,6 +89,28 @@ export function PropertyDetails({ data, symbol, rate, displayPrice, onUpdate, on
           </div>
         </label>
 
+        {/* Property Size */}
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-text-secondary">Property Size</span>
+          <div className="relative">
+            <input
+              type="text"
+              value={data.propertySize > 0 ? formatNumber(data.propertySize) : ''}
+              onChange={(e) => onUpdate('propertySize', parseInput(e.target.value))}
+              placeholder="100"
+              className="w-full rounded-lg bg-surface-dark border border-border-dark px-4 py-3 pr-12 text-white font-mono placeholder:text-text-secondary/50 focus:border-primary focus:outline-none"
+            />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary">
+              m²
+            </span>
+          </div>
+          {data.propertySize > 0 && displayPrice > 0 && (
+            <span className="text-xs text-primary">
+              {symbol} {formatNumber(Math.round(displayPrice / data.propertySize))} / m²
+            </span>
+          )}
+        </label>
+
         {/* Purchase Date */}
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-secondary">Purchase Date</span>
