@@ -65,7 +65,7 @@ export function RentalROICalculator() {
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">10-Year Rental ROI</h1>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">10 Year Annualized ROI</h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-slate-500 font-medium text-xs">Rental Strategy Analysis</span>
                 <span className="text-slate-300">|</span>

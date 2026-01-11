@@ -18,13 +18,13 @@ export const CALCULATORS: CalculatorConfig[] = [
   },
   {
     id: 'rental-roi',
-    name: '10-Year Rental ROI',
-    shortName: 'Rental ROI',
+    name: '10 Year Annualized ROI',
+    shortName: 'Annualized ROI',
     description: 'Project rental income and ROI over a 10-year investment horizon',
     icon: 'home_work',
     color: 'indigo',
     component: RentalROICalculator,
-    tags: ['rental', 'income', 'long-term', 'projections'],
+    tags: ['rental', 'income', 'long-term', 'projections', 'annualized'],
   },
   // Future calculators can be added here:
   // {
