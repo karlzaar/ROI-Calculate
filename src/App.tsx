@@ -21,25 +21,18 @@ function App() {
 
   const handleSaveDraft = useCallback(() => {
     setIsSaving(true);
-    // Dispatch event for active calculator to handle
-    window.dispatchEvent(new CustomEvent('calculator:saveDraft', {
-      detail: { calculatorId: activeCalculatorId }
-    }));
+    // Each calculator handles its own saving
     setTimeout(() => setIsSaving(false), 500);
-  }, [activeCalculatorId]);
+  }, []);
 
   const handleClearAll = useCallback(() => {
     if (showClearConfirm) {
-      // Confirmed - dispatch clear event for active calculator
-      window.dispatchEvent(new CustomEvent('calculator:clearAll', {
-        detail: { calculatorId: activeCalculatorId }
-      }));
       setShowClearConfirm(false);
     } else {
       setShowClearConfirm(true);
       setTimeout(() => setShowClearConfirm(false), 3000);
     }
-  }, [showClearConfirm, activeCalculatorId]);
+  }, [showClearConfirm]);
 
   const activeCalculator = getCalculatorById(activeCalculatorId);
   const ActiveComponent = activeCalculator?.component;

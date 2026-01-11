@@ -9,8 +9,6 @@ import {
 import { Toast } from '../../components/ui/Toast';
 import { generatePDFReport } from '../../utils/pdfExport';
 
-const CALCULATOR_ID = 'xirr';
-
 export function XIRRCalculator() {
   const {
     data,
@@ -34,32 +32,7 @@ export function XIRRCalculator() {
     regenerateSchedule,
     updateScheduleEntry,
     updateExit,
-    reset,
-    saveDraft,
   } = useInvestment();
-
-  // Listen for save/clear events from header
-  useEffect(() => {
-    const handleSaveDraft = (e: CustomEvent<{ calculatorId: string }>) => {
-      if (e.detail.calculatorId === CALCULATOR_ID) {
-        saveDraft();
-      }
-    };
-
-    const handleClearAll = (e: CustomEvent<{ calculatorId: string }>) => {
-      if (e.detail.calculatorId === CALCULATOR_ID) {
-        reset();
-      }
-    };
-
-    window.addEventListener('calculator:saveDraft', handleSaveDraft as EventListener);
-    window.addEventListener('calculator:clearAll', handleClearAll as EventListener);
-
-    return () => {
-      window.removeEventListener('calculator:saveDraft', handleSaveDraft as EventListener);
-      window.removeEventListener('calculator:clearAll', handleClearAll as EventListener);
-    };
-  }, [saveDraft, reset]);
 
   const dataRef = useRef(data);
   const resultRef = useRef(result);

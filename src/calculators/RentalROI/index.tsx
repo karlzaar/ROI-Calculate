@@ -1,15 +1,12 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { INITIAL_ASSUMPTIONS, CURRENCIES } from './constants';
-import type { CurrencyCode, User, Assumptions } from './types';
+import type { CurrencyCode, User } from './types';
 import { calculateProjections, calculateAverage } from './utils/calculations';
 import DashboardHeader from './components/DashboardHeader';
 import TopInputsPanel from './components/TopInputsPanel';
 import AssumptionsPanel from './components/AssumptionsPanel';
 import ProjectionsTable from './components/ProjectionsTable';
 import ReportView from './components/ReportView';
-
-const CALCULATOR_ID = 'rental-roi';
-const DRAFT_STORAGE_KEY = 'rental_roi_draft';
 
 export function RentalROICalculator() {
   const [view, setView] = useState<'dashboard' | 'report'>('dashboard');
@@ -37,55 +34,7 @@ export function RentalROICalculator() {
     }
   }, [user]);
 
-  const [assumptions, setAssumptions] = useState<Assumptions>(() => {
-    // Load saved draft on mount
-    try {
-      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error('Failed to load draft:', e);
-    }
-    return INITIAL_ASSUMPTIONS;
-  });
-
-  // Save and reset handlers
-  const saveDraft = useCallback(() => {
-    try {
-      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(assumptions));
-    } catch (e) {
-      console.error('Failed to save draft:', e);
-    }
-  }, [assumptions]);
-
-  const resetAll = useCallback(() => {
-    setAssumptions(INITIAL_ASSUMPTIONS);
-    localStorage.removeItem(DRAFT_STORAGE_KEY);
-  }, []);
-
-  // Listen for save/clear events from header
-  useEffect(() => {
-    const handleSaveDraft = (e: CustomEvent<{ calculatorId: string }>) => {
-      if (e.detail.calculatorId === CALCULATOR_ID) {
-        saveDraft();
-      }
-    };
-
-    const handleClearAll = (e: CustomEvent<{ calculatorId: string }>) => {
-      if (e.detail.calculatorId === CALCULATOR_ID) {
-        resetAll();
-      }
-    };
-
-    window.addEventListener('calculator:saveDraft', handleSaveDraft as EventListener);
-    window.addEventListener('calculator:clearAll', handleClearAll as EventListener);
-
-    return () => {
-      window.removeEventListener('calculator:saveDraft', handleSaveDraft as EventListener);
-      window.removeEventListener('calculator:clearAll', handleClearAll as EventListener);
-    };
-  }, [saveDraft, resetAll]);
+  const [assumptions, setAssumptions] = useState(INITIAL_ASSUMPTIONS);
 
   const data = useMemo(() => calculateProjections(assumptions), [assumptions]);
   const averages = useMemo(() => calculateAverage(data), [data]);
@@ -156,7 +105,7 @@ export function RentalROICalculator() {
             </div>
 
             <button
-              onClick={resetAll}
+              onClick={() => setAssumptions(INITIAL_ASSUMPTIONS)}
               className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-indigo-700 transition-all active:scale-95"
             >
               Reset Values
