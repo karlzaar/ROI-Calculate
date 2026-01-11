@@ -149,7 +149,7 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
           </thead>
           <tbody>
             {sections.map((section, sIdx) => {
-              const isCollapsed = collapsedSections[section.title] ?? !section.isExpandedByDefault;
+              const isCollapsed = collapsedSections[section.title] ?? true;
               return (
                 <React.Fragment key={sIdx}>
                   <tr 
