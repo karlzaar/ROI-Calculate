@@ -82,11 +82,6 @@ export function CalculatorSelector({ calculators, activeId, onSelect }: Props) {
             );
           })}
 
-          {/* More calculators indicator */}
-          <div className="flex items-center gap-2 px-3 py-2 text-gray-300">
-            <span className="text-xs font-medium">More coming soon</span>
-            <span className="material-symbols-outlined text-sm">arrow_forward</span>
-          </div>
         </div>
       </div>
     </div>
