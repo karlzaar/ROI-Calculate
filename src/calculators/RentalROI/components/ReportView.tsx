@@ -4,7 +4,6 @@ import type { YearlyData, Assumptions, CurrencyConfig, User } from '../types';
 import ProjectionsTable from './ProjectionsTable';
 import AISummary from './AISummary';
 import DashboardHeader from './DashboardHeader';
-import VisualsPanel from './VisualsPanel';
 import AuthModal from './AuthModal';
 
 interface Props {
@@ -95,15 +94,6 @@ const ReportView: React.FC<Props> = ({ data, averages, assumptions, currency, us
             <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Executive Metrics</h2>
           </div>
           <DashboardHeader data={data} currency={currency} />
-        </section>
-
-        {/* Visual Charts */}
-        <section className="mb-16 page-break-before">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-2 h-6 bg-emerald-500 rounded-full"></div>
-            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Financial Projections</h2>
-          </div>
-          <VisualsPanel data={data} currency={currency} />
         </section>
 
         {/* The Big Table */}

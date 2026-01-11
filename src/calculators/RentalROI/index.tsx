@@ -6,7 +6,6 @@ import DashboardHeader from './components/DashboardHeader';
 import TopInputsPanel from './components/TopInputsPanel';
 import AssumptionsPanel from './components/AssumptionsPanel';
 import ProjectionsTable from './components/ProjectionsTable';
-import VisualsPanel from './components/VisualsPanel';
 import ReportView from './components/ReportView';
 
 export function RentalROICalculator() {
@@ -117,8 +116,6 @@ export function RentalROICalculator() {
         <DashboardHeader data={data} currency={currency} />
 
         <div className="space-y-6">
-          <VisualsPanel data={data} currency={currency} />
-
           <div className="space-y-6">
             <TopInputsPanel assumptions={assumptions} onChange={setAssumptions} currency={currency} />
 
