@@ -1,12 +1,14 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { INITIAL_ASSUMPTIONS, CURRENCIES } from './constants';
-import type { CurrencyCode, User } from './types';
+import type { CurrencyCode, User, Assumptions } from './types';
 import { calculateProjections, calculateAverage } from './utils/calculations';
 import DashboardHeader from './components/DashboardHeader';
 import TopInputsPanel from './components/TopInputsPanel';
 import AssumptionsPanel from './components/AssumptionsPanel';
 import ProjectionsTable from './components/ProjectionsTable';
 import ReportView from './components/ReportView';
+
+const DRAFT_STORAGE_KEY = 'rental_roi_draft';
 
 export function RentalROICalculator() {
   const [view, setView] = useState<'dashboard' | 'report'>('dashboard');
@@ -34,7 +36,35 @@ export function RentalROICalculator() {
     }
   }, [user]);
 
-  const [assumptions, setAssumptions] = useState(INITIAL_ASSUMPTIONS);
+  const [assumptions, setAssumptions] = useState<Assumptions>(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Failed to load draft:', e);
+    }
+    return INITIAL_ASSUMPTIONS;
+  });
+
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveDraft = useCallback(() => {
+    setIsSaving(true);
+    try {
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(assumptions));
+      setTimeout(() => setIsSaving(false), 300);
+    } catch (e) {
+      console.error('Failed to save draft:', e);
+      setIsSaving(false);
+    }
+  }, [assumptions]);
+
+  const handleReset = useCallback(() => {
+    setAssumptions(INITIAL_ASSUMPTIONS);
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+  }, []);
 
   const data = useMemo(() => calculateProjections(assumptions), [assumptions]);
   const averages = useMemo(() => calculateAverage(data), [data]);
@@ -105,10 +135,28 @@ export function RentalROICalculator() {
             </div>
 
             <button
-              onClick={() => setAssumptions(INITIAL_ASSUMPTIONS)}
-              className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-indigo-700 transition-all active:scale-95"
+              onClick={handleReset}
+              className="bg-red-500 text-white px-5 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-red-600 transition-all active:scale-95"
             >
               Reset Values
+            </button>
+
+            <button
+              onClick={handleSaveDraft}
+              disabled={isSaving}
+              className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>Save Draft</span>
+              )}
             </button>
           </div>
         </header>

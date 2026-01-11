@@ -11,40 +11,17 @@ function App() {
     return saved && getCalculatorById(saved) ? saved : 'xirr';
   });
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-
   const handleCalculatorChange = useCallback((id: string) => {
     setActiveCalculatorId(id);
     localStorage.setItem(ACTIVE_CALCULATOR_KEY, id);
   }, []);
-
-  const handleSaveDraft = useCallback(() => {
-    setIsSaving(true);
-    // Each calculator handles its own saving
-    setTimeout(() => setIsSaving(false), 500);
-  }, []);
-
-  const handleClearAll = useCallback(() => {
-    if (showClearConfirm) {
-      setShowClearConfirm(false);
-    } else {
-      setShowClearConfirm(true);
-      setTimeout(() => setShowClearConfirm(false), 3000);
-    }
-  }, [showClearConfirm]);
 
   const activeCalculator = getCalculatorById(activeCalculatorId);
   const ActiveComponent = activeCalculator?.component;
 
   return (
     <div className="bg-background text-text-primary font-display min-h-screen flex flex-col">
-      <Header
-        onSaveDraft={handleSaveDraft}
-        onClearAll={handleClearAll}
-        isSaving={isSaving}
-        showClearConfirm={showClearConfirm}
-      />
+      <Header />
 
       <CalculatorSelector
         calculators={CALCULATORS}

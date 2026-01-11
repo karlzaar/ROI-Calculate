@@ -378,8 +378,19 @@ export function useInvestment() {
   
   const reset = useCallback(() => {
     setData(DEFAULT_INVESTMENT);
+    localStorage.removeItem('baliinvest_draft');
   }, []);
-  
+
+  const saveDraft = useCallback(() => {
+    try {
+      localStorage.setItem('baliinvest_draft', JSON.stringify({ data }));
+      return true;
+    } catch (e) {
+      console.error('Failed to save draft:', e);
+      return false;
+    }
+  }, [data]);
+
   return {
     data,
     result,
@@ -410,5 +421,6 @@ export function useInvestment() {
     removeCashFlow,
     updateCashFlow,
     reset,
+    saveDraft,
   };
 }

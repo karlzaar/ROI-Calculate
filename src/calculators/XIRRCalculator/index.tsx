@@ -32,7 +32,36 @@ export function XIRRCalculator() {
     regenerateSchedule,
     updateScheduleEntry,
     updateExit,
+    reset,
+    saveDraft,
   } = useInvestment();
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const handleSaveDraft = useCallback(() => {
+    setIsSaving(true);
+    const success = saveDraft();
+    setTimeout(() => {
+      setIsSaving(false);
+      if (success) {
+        setToast({ message: 'Draft saved successfully!', type: 'success' });
+      } else {
+        setToast({ message: 'Failed to save draft', type: 'error' });
+      }
+    }, 300);
+  }, [saveDraft]);
+
+  const handleReset = useCallback(() => {
+    if (showResetConfirm) {
+      reset();
+      setShowResetConfirm(false);
+      setToast({ message: 'All values reset', type: 'success' });
+    } else {
+      setShowResetConfirm(true);
+      setTimeout(() => setShowResetConfirm(false), 3000);
+    }
+  }, [showResetConfirm, reset]);
 
   const dataRef = useRef(data);
   const resultRef = useRef(result);
@@ -86,12 +115,44 @@ export function XIRRCalculator() {
       )}
 
       <div className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-black text-text-primary tracking-tight">
-          XIRR Calculator
-        </h1>
-        <p className="text-text-muted text-lg mt-2">
-          Calculate the internal rate of return for your Bali villa investment with irregular cash flows.
-        </p>
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-black text-text-primary tracking-tight">
+              XIRR Calculator
+            </h1>
+            <p className="text-text-muted text-lg mt-2">
+              Calculate the internal rate of return for your Bali villa investment with irregular cash flows.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleReset}
+              className={`flex items-center justify-center gap-2 rounded-lg h-9 px-4 transition-colors text-sm font-medium ${
+                showResetConfirm
+                  ? 'bg-negative border border-negative text-white animate-pulse'
+                  : 'bg-transparent border border-negative/30 text-negative hover:bg-negative-light'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">delete_forever</span>
+              <span>{showResetConfirm ? 'Click to Confirm' : 'Reset Values'}</span>
+            </button>
+            <button
+              onClick={handleSaveDraft}
+              disabled={isSaving}
+              className="flex items-center justify-center gap-2 rounded-lg h-9 px-4 bg-transparent border border-primary text-primary hover:bg-primary-light transition-colors text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? (
+                <>
+                  <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>Save Draft</span>
+              )}
+            </button>
+          </div>
+        </div>
 
         {currency !== 'IDR' && (
           <div className="mt-3 flex items-center gap-2 text-sm">
