@@ -3,7 +3,6 @@ import type { PropertyDetails as PropertyDetailsType } from '../../types/investm
 interface Props {
   data: PropertyDetailsType;
   symbol: string;
-  rate: number;
   displayPrice: number;
   onUpdate: <K extends keyof PropertyDetailsType>(key: K, value: PropertyDetailsType[K]) => void;
   onPriceChange: (displayValue: number) => void;
@@ -18,7 +17,7 @@ const LOCATIONS = [
   'Nusa Dua, Bali'
 ];
 
-export function PropertyDetails({ data, symbol, rate, displayPrice, onUpdate, onPriceChange }: Props) {
+export function PropertyDetails({ data, symbol, displayPrice, onUpdate, onPriceChange }: Props) {
   
   // Parse input: remove all non-digits, convert to number
   const parseInput = (value: string): number => {

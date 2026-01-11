@@ -209,7 +209,6 @@ export function XIRRCalculator() {
             <PropertyDetails
               data={data.property}
               symbol={symbol}
-              rate={rate}
               displayPrice={displayPrice}
               onUpdate={updateProperty}
               onPriceChange={updatePriceFromDisplay}
