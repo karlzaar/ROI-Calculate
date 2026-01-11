@@ -1,14 +1,15 @@
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-surface/95 backdrop-blur-sm px-6 py-4 lg:px-10">
-      <div className="mx-auto flex max-w-7xl items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center size-8 rounded bg-primary-light text-primary">
-            <span className="material-symbols-outlined text-2xl">ssid_chart</span>
+    <header className="w-full bg-white border-b border-slate-200">
+      <div className="mx-auto max-w-7xl px-4 md:px-10 lg:px-20 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-600 shadow-lg shadow-indigo-200">
+            <span className="material-symbols-outlined text-2xl text-white">ssid_chart</span>
           </div>
-          <h2 className="text-text-primary text-lg font-bold leading-tight tracking-[-0.015em]">
-            BaliInvest
-          </h2>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">BaliInvest</h1>
+            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Property Investment Tools</p>
+          </div>
         </div>
       </div>
     </header>

@@ -47,13 +47,9 @@ const COLOR_CLASSES: Record<CalculatorConfig['color'], { bg: string; text: strin
 
 export function CalculatorSelector({ calculators, activeId, onSelect }: Props) {
   return (
-    <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <div className="bg-slate-50 border-b border-slate-200 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 md:px-10 lg:px-20">
-        <div className="flex items-center gap-2 py-3 overflow-x-auto scrollbar-hide">
-          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider mr-2 whitespace-nowrap">
-            Calculator:
-          </span>
-
+        <div className="flex items-center gap-3 py-2 overflow-x-auto scrollbar-hide">
           {calculators.map((calc) => {
             const isActive = calc.id === activeId;
             const colors = COLOR_CLASSES[calc.color];
@@ -63,25 +59,21 @@ export function CalculatorSelector({ calculators, activeId, onSelect }: Props) {
                 key={calc.id}
                 onClick={() => onSelect(calc.id)}
                 className={`
-                  flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                  flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold
                   transition-all duration-200 whitespace-nowrap
                   ${isActive
-                    ? `${colors.activeBg} ${colors.text} border-2 ${colors.border}`
-                    : 'bg-gray-50 text-gray-600 border-2 border-transparent hover:bg-gray-100'
+                    ? `bg-white ${colors.text} shadow-sm border border-slate-200`
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                   }
                 `}
               >
-                <span className={`material-symbols-outlined text-lg ${isActive ? colors.text : 'text-gray-400'}`}>
+                <span className={`material-symbols-outlined text-lg ${isActive ? colors.text : 'text-slate-400'}`}>
                   {calc.icon}
                 </span>
                 <span>{calc.shortName}</span>
-                {isActive && (
-                  <span className={`w-2 h-2 rounded-full ${colors.text.replace('text', 'bg')}`} />
-                )}
               </button>
             );
           })}
-
         </div>
       </div>
     </div>

@@ -12,7 +12,7 @@ export const CALCULATORS: CalculatorConfig[] = [
     shortName: 'XIRR',
     description: 'Calculate internal rate of return for villa flip investments with irregular cash flows',
     icon: 'trending_up',
-    color: 'green',
+    color: 'indigo',
     component: XIRRCalculator,
     tags: ['flip', 'irr', 'investment', 'returns'],
   },

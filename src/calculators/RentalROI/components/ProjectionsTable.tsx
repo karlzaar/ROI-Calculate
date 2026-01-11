@@ -142,7 +142,7 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
                   {y.calendarYear}
                 </th>
               ))}
-              <th className="p-4 font-bold text-center text-slate-600 bg-slate-50/50 border-b border-slate-100 sticky right-0 z-[10] border-l border-slate-200">
+              <th className="p-4 font-bold text-center text-slate-600 bg-white border-b border-slate-100 sticky right-0 z-[10] border-l border-slate-200">
                 Average
               </th>
             </tr>
@@ -172,7 +172,7 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
                     {data.map(y => (
                       <td key={y.year} className="p-4 text-right border-b border-slate-50"></td>
                     ))}
-                    <td className="sticky right-0 bg-slate-50/50 p-4 border-l border-slate-200"></td>
+                    <td className="sticky right-0 bg-white p-4 border-l border-slate-200"></td>
                   </tr>
                   
                   {!isCollapsed && section.rows.map((row, rIdx) => (
@@ -192,7 +192,7 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
                           {renderCellValue((y as any)[row.key], row.type, row.color)}
                         </td>
                       ))}
-                      <td className={`sticky right-0 p-3 text-right z-[10] bg-slate-50/80 border-l border-slate-200 group-hover:bg-slate-100 transition-colors
+                      <td className={`sticky right-0 p-3 text-right z-[10] bg-white border-l border-slate-200 group-hover:bg-slate-50 transition-colors
                         ${row.bold ? 'font-bold' : ''}`}>
                         {avg[row.key as keyof YearlyData] !== undefined ? renderCellValue(avg[row.key as keyof YearlyData] as number, row.type, row.color) : <span className="text-slate-300">-</span>}
                       </td>
