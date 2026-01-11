@@ -1,214 +1,71 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { useInvestment } from './hooks/useInvestment';
-import {
-  Header,
-  PropertyDetails,
-  PaymentTerms,
-  ExitStrategySection,
-  ProjectForecast,
-} from './components';
-import { Toast } from './components/ui/Toast';
-import { generatePDFReport } from './utils/pdfExport';
+import { useState, useCallback, Suspense } from 'react';
+import { Header } from './components';
+import { CalculatorSelector } from './components/CalculatorSelector';
+import { CALCULATORS, getCalculatorById } from './calculators/registry';
 
-const DRAFT_STORAGE_KEY = 'baliinvest_draft';
+const ACTIVE_CALCULATOR_KEY = 'baliinvest_active_calculator';
 
 function App() {
-  const {
-    data,
-    result,
-    currency,
-    symbol,
-    rate,
-    ratesLoading,
-    ratesError,
-    ratesSource,
-    ratesLastUpdated,
-    refreshRates,
-    formatDisplay,
-    formatAbbrev,
-    idrToDisplay,
-    displayToIdr,
-    updateProperty,
-    updatePriceFromDisplay,
-    updateExitPriceFromDisplay,
-    updatePayment,
-    regenerateSchedule,
-    updateScheduleEntry,
-    updateExit,
-    reset,
-  } = useInvestment();
-
-  // Use refs to always have access to the latest data for PDF export
-  // This prevents stale closure issues with useCallback
-  const dataRef = useRef(data);
-  const resultRef = useRef(result);
-  const currencyRef = useRef(currency);
-  const symbolRef = useRef(symbol);
-  const rateRef = useRef(rate);
-  const formatDisplayRef = useRef(formatDisplay);
-  const formatAbbrevRef = useRef(formatAbbrev);
-
-  // Keep refs up to date
-  useEffect(() => {
-    dataRef.current = data;
-    resultRef.current = result;
-    currencyRef.current = currency;
-    symbolRef.current = symbol;
-    rateRef.current = rate;
-    formatDisplayRef.current = formatDisplay;
-    formatAbbrevRef.current = formatAbbrev;
-  }, [data, result, currency, symbol, rate, formatDisplay, formatAbbrev]);
+  const [activeCalculatorId, setActiveCalculatorId] = useState<string>(() => {
+    const saved = localStorage.getItem(ACTIVE_CALCULATOR_KEY);
+    return saved && getCalculatorById(saved) ? saved : 'xirr';
+  });
 
   const [isSaving, setIsSaving] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  const handleCalculatorChange = useCallback((id: string) => {
+    setActiveCalculatorId(id);
+    localStorage.setItem(ACTIVE_CALCULATOR_KEY, id);
+  }, []);
 
   const handleSaveDraft = useCallback(() => {
     setIsSaving(true);
-    try {
-      const draft = { data, savedAt: new Date().toISOString() };
-      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
-      setTimeout(() => {
-        setIsSaving(false);
-        setToast({ message: 'Draft saved successfully!', type: 'success' });
-      }, 500);
-    } catch {
-      setIsSaving(false);
-      setToast({ message: 'Failed to save draft', type: 'error' });
-    }
-  }, [data]);
+    // Each calculator handles its own saving
+    setTimeout(() => setIsSaving(false), 500);
+  }, []);
 
   const handleClearAll = useCallback(() => {
     if (showClearConfirm) {
-      // Second click - actually clear
-      localStorage.removeItem(DRAFT_STORAGE_KEY);
-      reset();
       setShowClearConfirm(false);
-      setToast({ message: 'All data cleared', type: 'success' });
     } else {
-      // First click - show confirmation
       setShowClearConfirm(true);
-      // Auto-reset after 3 seconds if not confirmed
       setTimeout(() => setShowClearConfirm(false), 3000);
     }
-  }, [reset, showClearConfirm]);
+  }, [showClearConfirm]);
 
-  // Use refs to always get the LATEST data when exporting PDF
-  // This fixes the stale closure issue where edits weren't showing
-  const handleExportPDF = useCallback(() => {
-    try {
-      // Read from refs to get the absolute latest data
-      generatePDFReport({
-        data: dataRef.current,
-        result: resultRef.current,
-        currency: currencyRef.current,
-        symbol: symbolRef.current,
-        formatDisplay: formatDisplayRef.current,
-        formatAbbrev: formatAbbrevRef.current,
-        rate: rateRef.current,
-      });
-      setToast({ message: 'PDF exported successfully!', type: 'success' });
-    } catch (error) {
-      console.error('PDF export error:', error);
-      setToast({ message: 'Failed to export PDF', type: 'error' });
-    }
-  }, []); // No dependencies - refs always have latest values
-
-  const displayPrice = idrToDisplay(data.property.totalPrice);
-  const displayExitPrice = idrToDisplay(data.exit.projectedSalesPrice);
+  const activeCalculator = getCalculatorById(activeCalculatorId);
+  const ActiveComponent = activeCalculator?.component;
 
   return (
     <div className="bg-background text-text-primary font-display min-h-screen flex flex-col">
-      <Header onSaveDraft={handleSaveDraft} onClearAll={handleClearAll} isSaving={isSaving} showClearConfirm={showClearConfirm} />
+      <Header
+        onSaveDraft={handleSaveDraft}
+        onClearAll={handleClearAll}
+        isSaving={isSaving}
+        showClearConfirm={showClearConfirm}
+      />
 
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+      <CalculatorSelector
+        calculators={CALCULATORS}
+        activeId={activeCalculatorId}
+        onSelect={handleCalculatorChange}
+      />
 
       <main className="flex-grow w-full px-4 py-8 md:px-10 lg:px-20">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-black text-text-primary tracking-tight">
-              New Investment Calculation
-            </h1>
-            <p className="text-text-muted text-lg mt-2">
-              Enter the financial details of your Bali villa project to forecast returns and calculate XIRR.
-            </p>
-
-            {currency !== 'IDR' && (
-              <div className="mt-3 flex items-center gap-2 text-sm">
-                <span className="text-text-secondary">
-                  Exchange Rate: 1 {currency} = {rate.toLocaleString()} IDR
-                </span>
-                {ratesLoading ? (
-                  <span className="text-yellow-400 text-xs">(loading...)</span>
-                ) : ratesError ? (
-                  <span className="text-red-400 text-xs" title={ratesError}>⚠️ Using fallback</span>
-                ) : (
-                  <span className="text-green-400 text-xs" title={`Source: ${ratesSource}`}>
-                    ✓ Updated {ratesLastUpdated}
-                  </span>
-                )}
-                <button
-                  onClick={refreshRates}
-                  className="text-accent hover:text-white text-xs underline ml-2"
-                  disabled={ratesLoading}
-                >
-                  Refresh
-                </button>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center min-h-[400px]">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  <p className="text-text-secondary">Loading calculator...</p>
+                </div>
               </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-8 flex flex-col gap-8">
-              <PropertyDetails
-                data={data.property}
-                symbol={symbol}
-                rate={rate}
-                displayPrice={displayPrice}
-                onUpdate={updateProperty}
-                onPriceChange={updatePriceFromDisplay}
-              />
-
-              <PaymentTerms
-                data={data.payment}
-                totalPriceIDR={data.property.totalPrice}
-                symbol={symbol}
-                formatDisplay={formatDisplay}
-                displayToIdr={displayToIdr}
-                idrToDisplay={idrToDisplay}
-                onUpdate={updatePayment}
-                onRegenerateSchedule={regenerateSchedule}
-                onUpdateScheduleEntry={updateScheduleEntry}
-              />
-
-              <ExitStrategySection
-                data={data.exit}
-                totalPriceIDR={data.property.totalPrice}
-                displayExitPrice={displayExitPrice}
-                symbol={symbol}
-                handoverDate={data.property.handoverDate}
-                displayToIdr={displayToIdr}
-                idrToDisplay={idrToDisplay}
-                onUpdate={updateExit}
-                onExitPriceChange={updateExitPriceFromDisplay}
-              />
-            </div>
-
-            <div className="lg:col-span-4">
-              <ProjectForecast
-                result={result}
-                symbol={symbol}
-                formatDisplay={formatDisplay}
-                onExportPDF={handleExportPDF}
-              />
-            </div>
-          </div>
+            }
+          >
+            {ActiveComponent && <ActiveComponent />}
+          </Suspense>
         </div>
       </main>
     </div>
