@@ -199,7 +199,7 @@ export function PaymentTerms({
 
           {/* Remaining Payment Schedule */}
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-lg">event_note</span>
                 <h3 className="font-bold text-text-primary">Remaining Payment Schedule</h3>
@@ -219,6 +219,9 @@ export function PaymentTerms({
                 <span className="text-sm text-text-secondary">months</span>
               </div>
             </div>
+            <p className="text-xs text-text-muted mb-4">
+              Default schedule based on equal installments. You can customize each due date and amount below.
+            </p>
 
             {!hasSchedule && totalPriceIDR > 0 && (
               <div className="text-center py-6 text-text-secondary border border-dashed border-border rounded-lg">
@@ -228,12 +231,6 @@ export function PaymentTerms({
 
             {hasSchedule && (
               <div className="rounded-lg border border-border bg-surface-alt overflow-hidden">
-                {/* Editable hint */}
-                <div className="px-4 py-2 bg-primary-light border-b border-primary/20 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-sm">info</span>
-                  <span className="text-xs text-primary">Click on any date or amount below to edit</span>
-                </div>
-
                 {/* Table Header */}
                 <div className="grid grid-cols-12 text-xs font-semibold text-text-secondary uppercase bg-background py-3 px-4 border-b border-border">
                   <div className="col-span-1">#</div>
