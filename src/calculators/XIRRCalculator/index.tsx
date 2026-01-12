@@ -103,6 +103,12 @@ export function XIRRCalculator() {
   const displayPrice = idrToDisplay(data.property.totalPrice);
   const displayExitPrice = idrToDisplay(data.exit.projectedSalesPrice);
 
+  // Validate that down payment + scheduled payments = total price
+  const downPaymentIDR = data.property.totalPrice * (data.payment.downPaymentPercent / 100);
+  const scheduleTotalIDR = data.payment.schedule.reduce((sum, entry) => sum + entry.amount, 0);
+  const totalPaymentsIDR = downPaymentIDR + scheduleTotalIDR;
+  const isPaymentValid = data.property.totalPrice === 0 || Math.abs(totalPaymentsIDR - data.property.totalPrice) < 1;
+
   return (
     <div className="min-h-screen bg-background text-text-primary selection:bg-primary-light selection:text-primary -mx-4 md:-mx-10 lg:-mx-20 -my-8 px-6 py-8">
       {toast && (
@@ -123,11 +129,9 @@ export function XIRRCalculator() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-text-primary tracking-tight">XIRR Calculator</h1>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-text-muted font-medium text-xs">Investment Return Analysis</span>
-                <span className="text-border">|</span>
-                <span className="text-text-muted font-medium text-xs">Irregular Cash Flows</span>
-              </div>
+              <p className="text-text-muted text-xs mt-1 max-w-md">
+                Calculate your real estate investment returns based on purchase price, payment schedule, and projected sale price
+              </p>
             </div>
           </div>
 
@@ -224,6 +228,7 @@ export function XIRRCalculator() {
               onUpdate={updatePayment}
               onRegenerateSchedule={regenerateSchedule}
               onUpdateScheduleEntry={updateScheduleEntry}
+              isPaymentValid={isPaymentValid}
             />
 
             <ExitStrategySection
@@ -245,6 +250,7 @@ export function XIRRCalculator() {
               symbol={symbol}
               formatDisplay={formatDisplay}
               onExportPDF={handleExportPDF}
+              isPaymentValid={isPaymentValid}
             />
           </div>
         </div>

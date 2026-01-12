@@ -1,5 +1,5 @@
 import { useState, useCallback, Suspense } from 'react';
-import { Header } from './components';
+import { Header, Footer } from './components';
 import { CalculatorSelector } from './components/CalculatorSelector';
 import { CALCULATORS, getCalculatorById } from './calculators/registry';
 
@@ -21,13 +21,15 @@ function App() {
 
   return (
     <div className="bg-background text-text-primary font-display min-h-screen flex flex-col">
-      <Header />
-
-      <CalculatorSelector
-        calculators={CALCULATORS}
-        activeId={activeCalculatorId}
-        onSelect={handleCalculatorChange}
-      />
+      {/* Sticky header section */}
+      <div className="sticky top-0 z-50 bg-white shadow-sm">
+        <Header />
+        <CalculatorSelector
+          calculators={CALCULATORS}
+          activeId={activeCalculatorId}
+          onSelect={handleCalculatorChange}
+        />
+      </div>
 
       <main className="flex-grow w-full px-4 py-8 md:px-10 lg:px-20">
         <div className="mx-auto max-w-7xl">
@@ -45,6 +47,8 @@ function App() {
           </Suspense>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

@@ -6,14 +6,15 @@ interface Props {
   symbol: string;
   formatDisplay: (idr: number) => string;
   onExportPDF?: () => void;
+  isPaymentValid?: boolean;
 }
 
-export function ProjectForecast({ result, symbol, formatDisplay, onExportPDF }: Props) {
+export function ProjectForecast({ result, symbol, formatDisplay, onExportPDF, isPaymentValid = true }: Props) {
   const xirrPercent = (result.rate * 100).toFixed(1);
   const isPositive = result.rate >= 0;
 
   return (
-    <div className="sticky top-28 flex flex-col gap-6">
+    <div className="sticky top-36 flex flex-col gap-6">
       {/* Main Card */}
       <div className="rounded-xl border border-border bg-surface p-6 shadow-lg">
         <h3 className="mb-4 text-lg font-bold text-text-primary">Project Forecast</h3>
@@ -70,11 +71,21 @@ export function ProjectForecast({ result, symbol, formatDisplay, onExportPDF }: 
         <div className="mt-6">
           <button
             onClick={onExportPDF}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary py-3 text-white font-bold hover:bg-primary-dark transition-colors"
+            disabled={!isPaymentValid}
+            className={`w-full flex items-center justify-center gap-2 rounded-lg py-3 font-bold transition-colors ${
+              isPaymentValid
+                ? 'bg-primary text-white hover:bg-primary-dark'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             <span className="material-symbols-outlined">picture_as_pdf</span>
             Export PDF Report
           </button>
+          {!isPaymentValid && (
+            <p className="text-xs text-red-500 mt-2 text-center">
+              Fix payment validation errors before exporting
+            </p>
+          )}
         </div>
       </div>
 

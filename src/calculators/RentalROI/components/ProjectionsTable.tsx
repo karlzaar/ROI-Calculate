@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { YearlyData, CurrencyConfig } from '../types';
 import { formatCurrency } from '../constants';
 
@@ -26,6 +26,43 @@ interface SectionConfig {
 
 const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkScrollPosition = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const { scrollLeft, scrollWidth, clientWidth } = container;
+    setCanScrollLeft(scrollLeft > 10);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+  }, []);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    checkScrollPosition();
+    container.addEventListener('scroll', checkScrollPosition);
+    window.addEventListener('resize', checkScrollPosition);
+
+    return () => {
+      container.removeEventListener('scroll', checkScrollPosition);
+      window.removeEventListener('resize', checkScrollPosition);
+    };
+  }, [checkScrollPosition]);
+
+  const scrollTo = (direction: 'left' | 'right') => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const scrollAmount = 300;
+    container.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth'
+    });
+  };
 
   const toggleSection = (title: string) => {
     setCollapsedSections(prev => ({
@@ -124,8 +161,49 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-      <div className="overflow-x-auto custom-scrollbar">
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm relative">
+      {/* Left scroll indicator */}
+      <div
+        className={`absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-white via-white/80 to-transparent z-30 pointer-events-none transition-opacity duration-300 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}
+        style={{ left: '320px' }}
+      />
+      {canScrollLeft && (
+        <button
+          onClick={() => scrollTo('left')}
+          className="absolute left-[330px] top-1/2 -translate-y-1/2 z-40 w-10 h-10 bg-white border border-slate-200 rounded-full shadow-lg flex items-center justify-center hover:bg-slate-50 hover:scale-110 transition-all duration-200 group"
+          aria-label="Scroll left"
+        >
+          <svg className="w-5 h-5 text-slate-600 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      )}
+
+      {/* Right scroll indicator */}
+      <div
+        className={`absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-white via-white/80 to-transparent z-30 pointer-events-none transition-opacity duration-300 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}
+        style={{ right: '160px' }}
+      />
+      {canScrollRight && (
+        <button
+          onClick={() => scrollTo('right')}
+          className="absolute right-[170px] top-1/2 -translate-y-1/2 z-40 w-10 h-10 bg-white border border-slate-200 rounded-full shadow-lg flex items-center justify-center hover:bg-slate-50 hover:scale-110 transition-all duration-200 group animate-pulse"
+          aria-label="Scroll right"
+        >
+          <svg className="w-5 h-5 text-slate-600 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      )}
+
+      {/* Scroll hint text */}
+      {canScrollRight && (
+        <div className="absolute top-2 right-[180px] z-40 bg-indigo-600 text-white text-xs px-3 py-1 rounded-full shadow-md animate-bounce">
+          Scroll for more →
+        </div>
+      )}
+
+      <div ref={scrollContainerRef} className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left text-[13px] border-separate border-spacing-0 min-w-[1900px] table-fixed">
           <colgroup>
             <col className="w-[320px]" />

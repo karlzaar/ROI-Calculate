@@ -90,6 +90,17 @@ export function generatePaymentSchedule(data: InvestmentData): CashFlow[] {
     ? new Date(property.handoverDate)
     : purchaseDate;
 
+  // Add booking fee if set (paid before or on purchase date)
+  if (payment.bookingFee > 0) {
+    const bookingFeeDate = payment.bookingFeeDate
+      ? new Date(payment.bookingFeeDate)
+      : purchaseDate;
+    cashFlows.push({
+      date: bookingFeeDate,
+      amount: -payment.bookingFee
+    });
+  }
+
   if (payment.type === 'full') {
     // Full payment upfront on purchase date
     if (property.totalPrice > 0) {

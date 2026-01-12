@@ -77,11 +77,55 @@ function generateAISummary(
   pricePerSqm: number
 ): string {
   const xirr = (result.rate * 100).toFixed(1);
+  const xirrNum = result.rate * 100;
   const years = (result.holdPeriodMonths / 12).toFixed(1);
-  const location = data.property.location || 'the selected area';
+  const months = result.holdPeriodMonths;
+  const location = data.property.location || 'the selected location';
   const projectName = data.property.projectName || 'This property';
+  const appreciation = data.property.totalPrice > 0
+    ? ((data.exit.projectedSalesPrice - data.property.totalPrice) / data.property.totalPrice) * 100
+    : 0;
+  const totalROI = result.totalInvested > 0 ? (result.netProfit / result.totalInvested) * 100 : 0;
+  const netProfitDisplay = Math.abs(result.netProfit);
 
-  return `${projectName} in ${location} presents a ${result.rate >= 0.15 ? 'high-alpha' : 'moderate'} investment profile. The projected XIRR of ${xirr}% over a condensed ${years}-year horizon indicates a ${result.rate >= 0.2 ? 'robust' : 'reasonable'} short-term capital appreciation play, likely targeting a flip upon construction milestones or completion. At ${symbol} ${pricePerSqm.toLocaleString()} per sqm, the entry point is ${result.rate >= 0.2 ? 'highly competitive' : 'reasonable'} for a region experiencing growth.`;
+  // Determine investment quality
+  let qualityDesc: string;
+  if (xirrNum >= 25) qualityDesc = 'exceptional';
+  else if (xirrNum >= 18) qualityDesc = 'strong';
+  else if (xirrNum >= 12) qualityDesc = 'solid';
+  else if (xirrNum >= 5) qualityDesc = 'moderate';
+  else if (xirrNum >= 0) qualityDesc = 'marginal';
+  else qualityDesc = 'negative';
+
+  // Determine time horizon description
+  let timeDesc: string;
+  if (months <= 12) timeDesc = 'short-term';
+  else if (months <= 24) timeDesc = 'medium-term';
+  else timeDesc = 'longer-term';
+
+  // Build summary based on actual data
+  const parts: string[] = [];
+
+  // Opening with project and return
+  if (result.netProfit >= 0) {
+    parts.push(`${projectName} in ${location} shows a ${qualityDesc} investment opportunity with a projected ${xirr}% XIRR over ${years} years.`);
+  } else {
+    parts.push(`${projectName} in ${location} currently projects a ${xirr}% return over ${years} years, indicating potential losses.`);
+  }
+
+  // Appreciation and profit details
+  if (appreciation > 0 && result.netProfit > 0) {
+    parts.push(`With ${appreciation.toFixed(1)}% appreciation and ${symbol} ${netProfitDisplay.toLocaleString()} net profit, this ${timeDesc} flip strategy yields ${totalROI.toFixed(1)}% total ROI.`);
+  } else if (appreciation <= 0) {
+    parts.push(`The projected sale price shows ${appreciation.toFixed(1)}% change from purchase, which may not cover costs.`);
+  }
+
+  // Price per sqm insight if available
+  if (pricePerSqm > 0 && data.property.propertySize > 0) {
+    parts.push(`Entry at ${symbol} ${pricePerSqm.toLocaleString()}/m² for ${data.property.propertySize}m².`);
+  }
+
+  return parts.join(' ');
 }
 
 export function generatePDFReport(options: PDFExportOptions): void {
@@ -536,6 +580,13 @@ export function generatePDFReport(options: PDFExportOptions): void {
   let outflowRunningSum = 0;
   let runningNetFlow = 0;
   let installmentNum = 0;
+  let downPaymentFound = false;
+
+  // Identify booking fee amount for matching
+  const bookingFeeIDR = data.payment.bookingFee;
+  const bookingFeeDate = data.payment.bookingFeeDate
+    ? new Date(data.payment.bookingFeeDate)
+    : null;
 
   outflows.forEach((cf, i) => {
     const isLast = i === outflows.length - 1;
@@ -545,9 +596,19 @@ export function generatePDFReport(options: PDFExportOptions): void {
 
     if (!isLast) outflowRunningSum += displayAmount;
 
+    // Determine event type based on amount and date matching
     let event: string;
-    if (i === 0) {
+    const cfAmount = Math.abs(cf.amount);
+    const isBookingFee = bookingFeeIDR > 0 &&
+      Math.abs(cfAmount - bookingFeeIDR) < 1 &&
+      (!bookingFeeDate || cf.date.getTime() === bookingFeeDate.getTime() ||
+       (bookingFeeDate && cf.date.toDateString() === bookingFeeDate.toDateString()));
+
+    if (isBookingFee && !downPaymentFound) {
+      event = 'Booking Fee';
+    } else if (!downPaymentFound) {
       event = 'Down Payment';
+      downPaymentFound = true;
     } else {
       installmentNum++;
       event = `Installment ${installmentNum}`;

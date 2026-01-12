@@ -92,14 +92,19 @@ export function ExitStrategySection({
           </div>
         </label>
 
-        {/* Sale Date (equals handover for flip) */}
-        <div className="flex flex-col gap-2">
+        {/* Sale Date */}
+        <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-secondary">Sale Date</span>
-          <span className="text-xs text-text-muted">Sell immediately at handover</span>
-          <div className="w-full rounded-lg bg-surface-alt border border-border px-4 py-3 text-text-primary font-mono">
-            {formattedHandoverDate}
-          </div>
-        </div>
+          <span className="text-xs text-text-muted">
+            {handoverDate ? `Handover: ${formattedHandoverDate}` : 'Set handover date above'}
+          </span>
+          <input
+            type="date"
+            value={data.saleDate || ''}
+            onChange={(e) => onUpdate('saleDate', e.target.value)}
+            className="w-full rounded-lg bg-surface-alt border border-border px-4 py-3 text-text-primary focus:border-primary focus:outline-none"
+          />
+        </label>
 
         {/* Closing Costs */}
         <label className="flex flex-col gap-2">
@@ -143,7 +148,6 @@ export function ExitStrategySection({
 
       {/* Quick Appreciation Buttons */}
       <div className="mt-4 flex flex-wrap gap-2">
-        <span className="text-xs text-text-muted mr-2 self-center">Quick set:</span>
         {[10, 15, 20, 25, 30, 40, 50].map((pct) => {
           const isActive = Math.abs(appreciation - pct) < 1;
           return (
