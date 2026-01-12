@@ -135,21 +135,146 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
   doc.setFont('helvetica', 'normal');
   doc.text(`Currency: ${currency.code}`, pageWidth - margin, yPos + 10, { align: 'right' });
 
-  yPos += 18;
+  yPos += 20;
 
-  // Project name
+  // Project name with more spacing
   doc.setTextColor(...COLORS.textDark);
   doc.setFontSize(FONT.xxl);
   doc.setFont('helvetica', 'bold');
   doc.text(projectName || '10-Year Rental Analysis', margin, yPos);
-  yPos += 5;
+  yPos += 6;
 
   // Property details
   doc.setTextColor(...COLORS.textMedium);
   doc.setFontSize(FONT.base);
   doc.setFont('helvetica', 'normal');
   doc.text(`${assumptions.keys}-Key Property  |  ${formatCurrency(assumptions.initialInvestment, currency)} Investment  |  10-Year Projections`, margin, yPos);
-  yPos += 8;
+  yPos += 10;
+
+  // ========================================
+  // AI DEAL ANALYZER SECTION
+  // ========================================
+  const aiBoxHeight = 36;
+
+  // Compute deal rating based on avg net yield
+  const getDealRating = () => {
+    if (avgNetYield >= 15) return { grade: 'A+', label: 'Excellent Deal', color: COLORS.primary, confidence: 90 };
+    if (avgNetYield >= 12) return { grade: 'A', label: 'Great Deal', color: COLORS.primary, confidence: 85 };
+    if (avgNetYield >= 9) return { grade: 'OK', label: 'Good Deal', color: COLORS.primary, confidence: 75 };
+    if (avgNetYield >= 6) return { grade: 'OK', label: 'Average', color: COLORS.orange, confidence: 65 };
+    if (avgNetYield >= 3) return { grade: 'C', label: 'Below Average', color: COLORS.orange, confidence: 60 };
+    return { grade: 'D', label: 'Poor Deal', color: COLORS.red, confidence: 50 };
+  };
+
+  const dealRating = getDealRating();
+
+  // Risk assessment
+  const riskLevel = paybackYears <= 5 ? 'Low' : paybackYears <= 8 ? 'Medium' : 'High';
+
+  // Appreciation assessment
+  const totalGrowthPct = calcGrowth(y1Data.takeHomeProfit, y10Data.takeHomeProfit);
+  const appreciationType = totalGrowthPct >= 100 ? 'High Growth' : totalGrowthPct >= 50 ? 'Moderate Growth' : totalGrowthPct >= 0 ? 'Stable' : 'Declining';
+
+  // Main card background
+  doc.setFillColor(...COLORS.cardBg);
+  doc.roundedRect(margin, yPos, contentWidth, aiBoxHeight, 3, 3, 'F');
+  doc.setDrawColor(...COLORS.border);
+  doc.roundedRect(margin, yPos, contentWidth, aiBoxHeight, 3, 3, 'S');
+
+  // Left section - Rating circle
+  const circleX = margin + 18;
+  const circleY = yPos + aiBoxHeight / 2;
+  const circleRadius = 10;
+
+  // Circle background
+  doc.setFillColor(...COLORS.primaryLight);
+  doc.circle(circleX, circleY, circleRadius, 'F');
+
+  // Circle border
+  doc.setDrawColor(...dealRating.color);
+  doc.setLineWidth(1.5);
+  doc.circle(circleX, circleY, circleRadius, 'S');
+  doc.setLineWidth(0.2);
+
+  // Grade text in circle
+  doc.setTextColor(...dealRating.color);
+  doc.setFontSize(FONT.md);
+  doc.setFont('helvetica', 'bold');
+  doc.text(dealRating.grade, circleX, circleY + 1, { align: 'center' });
+
+  // "DEAL RATING" label below circle
+  doc.setTextColor(...COLORS.textLight);
+  doc.setFontSize(FONT.xs - 1);
+  doc.setFont('helvetica', 'normal');
+  doc.text('DEAL RATING', circleX, circleY + circleRadius + 5, { align: 'center' });
+
+  // Rating label (e.g., "Below Average")
+  doc.setTextColor(...dealRating.color);
+  doc.setFontSize(FONT.sm);
+  doc.setFont('helvetica', 'bold');
+  doc.text(dealRating.label, circleX, circleY + circleRadius + 10, { align: 'center' });
+
+  // Confidence text
+  doc.setTextColor(...COLORS.textLight);
+  doc.setFontSize(FONT.xs - 1);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`AI Confidence: ${dealRating.confidence}%`, circleX, circleY + circleRadius + 14, { align: 'center' });
+
+  // Vertical separator
+  const sepX = margin + 42;
+  doc.setDrawColor(...COLORS.borderLight);
+  doc.line(sepX, yPos + 5, sepX, yPos + aiBoxHeight - 5);
+
+  // Right section - AI summary
+  const rightX = sepX + 6;
+
+  // Title + BETA badge
+  doc.setTextColor(...COLORS.textDark);
+  doc.setFontSize(FONT.md);
+  doc.setFont('helvetica', 'bold');
+  doc.text('AI Deal Analyzer Summary', rightX, yPos + 9);
+
+  // BETA badge
+  const badgeX = rightX + 48;
+  doc.setFillColor(...COLORS.primary);
+  doc.roundedRect(badgeX, yPos + 4, 14, 6, 1, 1, 'F');
+  doc.setTextColor(...COLORS.white);
+  doc.setFontSize(FONT.xs - 1);
+  doc.setFont('helvetica', 'bold');
+  doc.text('BETA', badgeX + 7, yPos + 8.5, { align: 'center' });
+
+  // AI-generated description
+  doc.setTextColor(...COLORS.textMedium);
+  doc.setFontSize(FONT.sm);
+  doc.setFont('helvetica', 'normal');
+  const aiDesc1 = `This ${assumptions.keys}-key property shows ${dealRating.label.toLowerCase()} potential with projected ${capPercent(avgNetYield)}% avg net yield over 10 years.`;
+  const aiDesc2 = `Estimated payback in ${paybackYears < 99 ? paybackYears.toFixed(1) : '10+'} years with ${appreciationType.toLowerCase()} cash flow trajectory.`;
+  doc.text(aiDesc1, rightX, yPos + 16);
+  doc.text(aiDesc2, rightX, yPos + 21);
+
+  // Pills at bottom
+  const pillY = yPos + 28;
+  const pillHeight = 5;
+
+  // Appreciation pill
+  doc.setFillColor(245, 245, 245);
+  doc.roundedRect(rightX, pillY, 30, pillHeight, 1.5, 1.5, 'F');
+  doc.setTextColor(...COLORS.textMedium);
+  doc.setFontSize(FONT.xs - 1);
+  doc.setFont('helvetica', 'normal');
+  doc.text(appreciationType, rightX + 15, pillY + 3.5, { align: 'center' });
+
+  // Period pill
+  doc.setFillColor(245, 245, 245);
+  doc.roundedRect(rightX + 34, pillY, 28, pillHeight, 1.5, 1.5, 'F');
+  doc.text(`Period: 10 Years`, rightX + 48, pillY + 3.5, { align: 'center' });
+
+  // Risk pill
+  doc.setFillColor(245, 245, 245);
+  doc.roundedRect(rightX + 66, pillY, 22, pillHeight, 1.5, 1.5, 'F');
+  doc.text(`Risk: ${riskLevel}`, rightX + 77, pillY + 3.5, { align: 'center' });
+
+  yPos += aiBoxHeight + 8;
 
   // ========================================
   // KEY METRICS ROW (5 boxes)
