@@ -28,6 +28,10 @@ const COLORS = {
   primaryDark: [22, 163, 74] as [number, number, number],
   primaryLight: [220, 252, 231] as [number, number, number],
 
+  // Brand colors
+  brandPurple: [99, 102, 241] as [number, number, number],
+  brandText: [148, 163, 184] as [number, number, number],
+
   orange: [249, 115, 22] as [number, number, number],
   orangeLight: [255, 237, 213] as [number, number, number],
 
@@ -166,19 +170,26 @@ export function generatePDFReport(options: PDFExportOptions): void {
   // HEADER SECTION
   // ========================================
 
-  // CONFIDENTIAL badge
-  doc.setFillColor(...COLORS.orangeLight);
-  doc.roundedRect(margin, yPos, 24, 5, 1, 1, 'F');
-  doc.setTextColor(...COLORS.orange);
-  doc.setFontSize(FONT.xs);
+  // Logo - ROI box
+  const logoBoxSize = 12;
+  doc.setFillColor(...COLORS.brandPurple);
+  doc.roundedRect(margin, yPos, logoBoxSize, logoBoxSize, 2, 2, 'F');
+  doc.setTextColor(...COLORS.white);
+  doc.setFontSize(FONT.sm);
   doc.setFont('helvetica', 'bold');
-  doc.text('CONFIDENTIAL', margin + 12, yPos + 3.5, { align: 'center' });
+  doc.text('ROI', margin + logoBoxSize / 2, yPos + 7.5, { align: 'center' });
 
-  // INVESTMENT REPORT text
-  doc.setTextColor(...COLORS.textLight);
+  // Logo - BaliInvest text
+  doc.setTextColor(...COLORS.textDark);
+  doc.setFontSize(FONT.xl);
+  doc.setFont('helvetica', 'bold');
+  doc.text('BaliInvest', margin + logoBoxSize + 4, yPos + 5);
+
+  // Logo - Property Investment Tools tagline
+  doc.setTextColor(...COLORS.brandPurple);
   doc.setFontSize(FONT.sm);
   doc.setFont('helvetica', 'normal');
-  doc.text('INVESTMENT REPORT', margin + 28, yPos + 3.5);
+  doc.text('Property Investment Tools', margin + logoBoxSize + 4, yPos + 10);
 
   // Right side - Generated date
   doc.setTextColor(...COLORS.textLight);
@@ -194,7 +205,7 @@ export function generatePDFReport(options: PDFExportOptions): void {
   doc.setFont('helvetica', 'normal');
   doc.text(`Base Currency: ${currency}`, pageWidth - margin, yPos + 10, { align: 'right' });
 
-  yPos += 12;
+  yPos += 14;
 
   // Project name (large)
   doc.setTextColor(...COLORS.textDark);
@@ -639,14 +650,27 @@ export function generatePDFReport(options: PDFExportOptions): void {
   });
 
   inflows.forEach(cf => {
-    const displayAmount = toDisplay(cf.amount);
-    runningNetFlow += displayAmount;
+    // Show gross sale price as inflow
+    const grossSaleDisplay = toDisplay(data.exit.projectedSalesPrice);
+    runningNetFlow += grossSaleDisplay;
 
     rows.push({
       date: cf.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      event: 'Exit/Sale',
-      inflow: `${symbol} ${displayAmount.toLocaleString()}`,
+      event: 'Total Sale Price',
+      inflow: `${symbol} ${grossSaleDisplay.toLocaleString()}`,
       outflow: '-',
+      netFlow: runningNetFlow,
+    });
+
+    // Show closing costs as outflow
+    const closingCostsDisplay = toDisplay(closingCosts);
+    runningNetFlow -= closingCostsDisplay;
+
+    rows.push({
+      date: cf.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      event: 'Closing Costs',
+      inflow: '-',
+      outflow: `${symbol} ${closingCostsDisplay.toLocaleString()}`,
       netFlow: runningNetFlow,
     });
   });
