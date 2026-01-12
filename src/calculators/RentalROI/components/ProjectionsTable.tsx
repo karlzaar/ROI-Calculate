@@ -196,12 +196,6 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
         </button>
       )}
 
-      {/* Scroll hint text */}
-      {canScrollRight && (
-        <div className="absolute top-2 right-[180px] z-40 bg-indigo-600 text-white text-xs px-3 py-1 rounded-full shadow-md animate-bounce">
-          Scroll for more →
-        </div>
-      )}
 
       <div ref={scrollContainerRef} className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left text-[13px] border-separate border-spacing-0 min-w-[1900px] table-fixed">
