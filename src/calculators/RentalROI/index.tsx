@@ -143,11 +143,9 @@ export function RentalROICalculator() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-900 tracking-tight">10 Year Annualized ROI</h1>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-slate-500 font-medium text-xs">Rental Strategy Analysis</span>
-                <span className="text-slate-300">|</span>
-                <span className="text-slate-500 font-medium text-xs">10 Year Projections</span>
-              </div>
+              <p className="text-slate-500 text-xs mt-1 max-w-md">
+                Project your rental property returns with revenue streams, operating costs, and management fees over 10 years
+              </p>
             </div>
           </div>
 

@@ -10,7 +10,7 @@ export function Header() {
           />
           <div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">ROI Calculate</h1>
-            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Analyze property investments with XIRR & cash flow projections</p>
+            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Property Investment Tools</p>
           </div>
         </div>
       </div>
