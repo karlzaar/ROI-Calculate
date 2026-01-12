@@ -228,17 +228,17 @@ export function PaymentTerms({
 
             {hasSchedule && (
               <div className="rounded-lg border border-border bg-surface-alt overflow-hidden">
+                {/* Editable hint */}
+                <div className="px-4 py-2 bg-primary-light border-b border-primary/20 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-sm">info</span>
+                  <span className="text-xs text-primary">Click on any date or amount below to edit</span>
+                </div>
+
                 {/* Table Header */}
                 <div className="grid grid-cols-12 text-xs font-semibold text-text-secondary uppercase bg-background py-3 px-4 border-b border-border">
                   <div className="col-span-1">#</div>
-                  <div className="col-span-5 flex items-center gap-1">
-                    Due Date
-                    <span className="material-symbols-outlined text-xs opacity-50">edit</span>
-                  </div>
-                  <div className="col-span-6 text-right flex items-center justify-end gap-1">
-                    Amount
-                    <span className="material-symbols-outlined text-xs opacity-50">edit</span>
-                  </div>
+                  <div className="col-span-5">Due Date</div>
+                  <div className="col-span-6 text-right">Amount</div>
                 </div>
 
                 {/* Payment Rows */}
@@ -273,7 +273,7 @@ export function PaymentTerms({
                             type="date"
                             value={entry.date}
                             onChange={(e) => onUpdateScheduleEntry(entry.id, { date: e.target.value })}
-                            className="w-full bg-transparent text-text-primary text-sm rounded px-2 py-1 cursor-pointer hover:bg-background focus:outline-none focus:bg-background focus:ring-1 focus:ring-primary/50 transition-colors"
+                            className="w-full bg-background/50 border border-transparent text-text-primary text-sm rounded-md px-2 py-1.5 cursor-pointer hover:border-primary/50 hover:bg-background focus:outline-none focus:bg-background focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
                           />
                         </div>
                         <div className="col-span-6 flex items-center justify-end gap-1">
@@ -286,7 +286,7 @@ export function PaymentTerms({
                               const idrValue = displayToIdr(displayValue);
                               onUpdateScheduleEntry(entry.id, { amount: idrValue });
                             }}
-                            className="w-32 bg-transparent text-text-primary font-mono text-sm text-right rounded px-2 py-1 hover:bg-background focus:outline-none focus:bg-background focus:ring-1 focus:ring-primary/50 transition-colors"
+                            className="w-32 bg-background/50 border border-transparent text-text-primary font-mono text-sm text-right rounded-md px-2 py-1.5 cursor-pointer hover:border-primary/50 hover:bg-background focus:outline-none focus:bg-background focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
                           />
                         </div>
                       </div>
