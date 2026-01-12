@@ -1,5 +1,5 @@
 import { useState, useCallback, Suspense } from 'react';
-import { Header } from './components';
+import { Header, Footer } from './components';
 import { CalculatorSelector } from './components/CalculatorSelector';
 import { CALCULATORS, getCalculatorById } from './calculators/registry';
 
@@ -47,6 +47,8 @@ function App() {
           </Suspense>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }
