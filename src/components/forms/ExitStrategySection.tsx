@@ -143,7 +143,6 @@ export function ExitStrategySection({
 
       {/* Quick Appreciation Buttons */}
       <div className="mt-4 flex flex-wrap gap-2">
-        <span className="text-xs text-text-muted mr-2 self-center">Quick set:</span>
         {[10, 15, 20, 25, 30, 40, 50].map((pct) => {
           const isActive = Math.abs(appreciation - pct) < 1;
           return (
