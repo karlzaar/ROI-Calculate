@@ -159,10 +159,17 @@ export function PaymentTerms({
                     onUpdate('downPaymentPercent', newPercent);
                   }
                 }}
-                placeholder="0"
-                className="w-full rounded-lg bg-surface-alt border border-border px-4 py-3 pl-12 text-2xl text-text-primary font-mono placeholder:text-text-muted focus:border-primary focus:outline-none"
+                placeholder={totalPriceIDR > 0 ? "0" : "Enter total price first"}
+                disabled={totalPriceIDR === 0}
+                className={`w-full rounded-lg bg-surface-alt border border-border px-4 py-3 pl-12 text-2xl text-text-primary font-mono placeholder:text-text-muted focus:border-primary focus:outline-none ${totalPriceIDR === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
             </div>
+            {totalPriceIDR === 0 && (
+              <p className="text-xs text-amber-600 mb-3 flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm">info</span>
+                Enter the total property price above to set down payment amount
+              </p>
+            )}
 
             {/* Slider */}
             <div className="flex items-center gap-4 mb-2">

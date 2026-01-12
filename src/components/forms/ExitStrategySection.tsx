@@ -6,6 +6,7 @@ interface Props {
   displayExitPrice: number;
   symbol: string;
   handoverDate: string;
+  propertySize: number;
   displayToIdr: (display: number) => number;
   idrToDisplay: (idr: number) => number;
   onUpdate: <K extends keyof ExitStrategyData>(key: K, value: ExitStrategyData[K]) => void;
@@ -18,6 +19,7 @@ export function ExitStrategySection({
   displayExitPrice,
   symbol,
   handoverDate,
+  propertySize,
   displayToIdr,
   idrToDisplay,
   onUpdate,
@@ -38,6 +40,24 @@ export function ExitStrategySection({
 
   const formatNumber = (num: number): string => {
     return num.toLocaleString('en-US');
+  };
+
+  // Format large numbers with abbreviations
+  const formatCompact = (num: number): string => {
+    const absNum = Math.abs(num);
+    if (absNum >= 1e12) return (num / 1e12).toFixed(1) + 'T';
+    if (absNum >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+    if (absNum >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+    if (absNum >= 1e3) return (num / 1e3).toFixed(0) + 'K';
+    return formatNumber(num);
+  };
+
+  // Format appreciation with reasonable display
+  const formatAppreciation = (): string => {
+    if (appreciation >= 1000) {
+      return `+${formatCompact(appreciation)}`;
+    }
+    return `+${appreciation.toFixed(1)}%`;
   };
 
   // Handle closing cost currency input - convert to percentage
@@ -75,11 +95,11 @@ export function ExitStrategySection({
         {/* Projected Sales Price */}
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-secondary">Projected Sales Price</span>
-          <span className="text-xs text-text-muted">
-            {totalPriceIDR > 0 ? `Appreciation: +${appreciation.toFixed(1)}%` : 'Set purchase price first'}
+          <span className="text-xs text-text-muted truncate" title={totalPriceIDR > 0 ? `Appreciation: +${appreciation.toFixed(2)}%` : undefined}>
+            {totalPriceIDR > 0 ? `Appreciation: ${formatAppreciation()}` : 'Set purchase price first'}
           </span>
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted font-mono">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted font-mono text-sm">
               {symbol}
             </span>
             <input
@@ -87,7 +107,7 @@ export function ExitStrategySection({
               value={displayExitPrice > 0 ? formatNumber(displayExitPrice) : ''}
               onChange={(e) => onExitPriceChange(parseInput(e.target.value))}
               placeholder="4,375,000,000"
-              className="w-full rounded-lg bg-surface-alt border border-border px-4 py-3 pl-12 text-text-primary font-mono text-lg placeholder:text-text-muted focus:border-primary focus:outline-none"
+              className="w-full rounded-lg bg-surface-alt border border-border px-4 py-3 pl-12 text-text-primary font-mono text-base placeholder:text-text-muted focus:border-primary focus:outline-none overflow-hidden text-ellipsis"
             />
           </div>
         </label>
@@ -110,8 +130,8 @@ export function ExitStrategySection({
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-secondary">Closing Costs</span>
           <span className="text-xs text-text-muted">Taxes, fees, commissions</span>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 rounded-lg bg-surface-alt border border-border px-3 py-3">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-lg bg-surface-alt border border-border px-3 py-3 flex-shrink-0">
               <input
                 type="text"
                 inputMode="decimal"
@@ -129,9 +149,9 @@ export function ExitStrategySection({
               />
               <span className="text-text-muted font-mono">%</span>
             </div>
-            <span className="text-text-muted">=</span>
-            <div className="flex-grow relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted font-mono">
+            <span className="text-text-muted flex-shrink-0">=</span>
+            <div className="flex-1 min-w-0 relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-mono text-sm">
                 {symbol}
               </span>
               <input
@@ -139,7 +159,8 @@ export function ExitStrategySection({
                 value={closingCostDisplay > 0 ? formatNumber(closingCostDisplay) : ''}
                 onChange={(e) => handleClosingCostAmountChange(parseInput(e.target.value))}
                 placeholder="0"
-                className="w-full rounded-lg bg-surface-alt border border-border px-4 py-3 pl-12 text-text-primary font-mono focus:border-primary focus:outline-none"
+                title={closingCostDisplay > 0 ? `${symbol} ${formatNumber(closingCostDisplay)}` : undefined}
+                className="w-full rounded-lg bg-surface-alt border border-border px-3 py-3 pl-10 text-text-primary font-mono text-sm focus:border-primary focus:outline-none truncate"
               />
             </div>
           </div>
@@ -164,6 +185,46 @@ export function ExitStrategySection({
             </button>
           );
         })}
+      </div>
+
+      {/* Summary Cards */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 rounded-lg bg-surface-alt border border-border overflow-hidden">
+          <span className="text-xs text-text-muted">Gross Sale Price</span>
+          <div className="text-lg font-mono text-accent font-bold mt-1 truncate" title={`${symbol} ${formatNumber(idrToDisplay(data.projectedSalesPrice))}`}>
+            {symbol} {formatCompact(idrToDisplay(data.projectedSalesPrice))}
+          </div>
+        </div>
+
+        <div className="p-4 rounded-lg bg-surface-alt border border-border overflow-hidden">
+          <span className="text-xs text-text-muted">Closing Costs</span>
+          <div className="text-lg font-mono text-text-primary font-bold mt-1 truncate" title={`${symbol} ${formatNumber(closingCostDisplay)}`}>
+            {symbol} {formatCompact(closingCostDisplay)}
+          </div>
+          <span className="text-xs text-text-muted">{data.closingCostPercent}% Total Expenses</span>
+        </div>
+
+        <div className="p-4 rounded-lg bg-surface-alt border border-border overflow-hidden">
+          <span className="text-xs text-text-muted">New Price / sqm</span>
+          <div className="text-lg font-mono text-primary font-bold mt-1 truncate" title={propertySize > 0 ? `${symbol} ${formatNumber(idrToDisplay(data.projectedSalesPrice / propertySize))}` : undefined}>
+            {propertySize > 0
+              ? `${symbol} ${formatCompact(idrToDisplay(data.projectedSalesPrice / propertySize))}`
+              : 'Set property size'}
+          </div>
+          {propertySize > 0 && (
+            <span className="text-xs text-text-muted">per square meter</span>
+          )}
+        </div>
+      </div>
+
+      {/* Net Proceeds */}
+      <div className="mt-4 p-4 rounded-lg bg-accent-light border border-accent/20 overflow-hidden">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-medium text-accent flex-shrink-0">Net Proceeds from Sale</span>
+          <span className="text-xl font-mono font-bold text-accent truncate" title={`${symbol} ${formatNumber(idrToDisplay(data.projectedSalesPrice - closingCostIDR))}`}>
+            {symbol} {formatCompact(idrToDisplay(data.projectedSalesPrice - closingCostIDR))}
+          </span>
+        </div>
       </div>
     </section>
   );

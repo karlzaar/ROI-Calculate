@@ -237,6 +237,7 @@ export function XIRRCalculator() {
               displayExitPrice={displayExitPrice}
               symbol={symbol}
               handoverDate={data.property.handoverDate}
+              propertySize={data.property.propertySize}
               displayToIdr={displayToIdr}
               idrToDisplay={idrToDisplay}
               onUpdate={updateExit}

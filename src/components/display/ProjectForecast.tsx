@@ -10,8 +10,32 @@ interface Props {
 }
 
 export function ProjectForecast({ result, symbol, formatDisplay, onExportPDF, isPaymentValid = true }: Props) {
-  const xirrPercent = (result.rate * 100).toFixed(1);
+  const xirrValue = result.rate * 100;
+  const xirrPercent = xirrValue.toFixed(1);
   const isPositive = result.rate >= 0;
+
+  // Determine font size based on XIRR value length
+  const getXirrFontSize = () => {
+    const len = xirrPercent.length;
+    if (len <= 4) return 'text-4xl';
+    if (len <= 6) return 'text-3xl';
+    if (len <= 8) return 'text-2xl';
+    return 'text-xl';
+  };
+
+  // Format currency with abbreviation for large numbers
+  const formatCompact = (value: number): string => {
+    const absValue = Math.abs(value);
+    const formatted = formatDisplay(absValue);
+    // If the formatted string is too long, use abbreviations
+    if (formatted.length > 12) {
+      if (absValue >= 1e12) return (absValue / 1e12).toFixed(1) + 'T';
+      if (absValue >= 1e9) return (absValue / 1e9).toFixed(1) + 'B';
+      if (absValue >= 1e6) return (absValue / 1e6).toFixed(1) + 'M';
+      if (absValue >= 1e3) return (absValue / 1e3).toFixed(1) + 'K';
+    }
+    return formatted;
+  };
 
   return (
     <div className="sticky top-36 flex flex-col gap-6">
@@ -25,11 +49,11 @@ export function ProjectForecast({ result, symbol, formatDisplay, onExportPDF, is
             <p className="text-sm text-text-secondary">Estimated XIRR</p>
             <Tooltip text="Extended Internal Rate of Return - measures the annualized return of your investment accounting for irregular cash flows and timing. Higher is better." />
           </div>
-          <div className="flex items-end justify-center gap-2">
-            <span className={`text-4xl font-black ${isPositive ? 'text-primary' : 'text-negative'}`}>
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <span className={`${getXirrFontSize()} font-black ${isPositive ? 'text-primary' : 'text-negative'} break-all`}>
               {xirrPercent}%
             </span>
-            <span className={`text-xs mb-1.5 flex items-center ${isPositive ? 'text-primary' : 'text-negative'}`}>
+            <span className={`text-xs flex items-center ${isPositive ? 'text-primary' : 'text-negative'}`}>
               <span className="material-symbols-outlined text-sm">
                 {isPositive ? 'trending_up' : 'trending_down'}
               </span>
@@ -40,28 +64,28 @@ export function ProjectForecast({ result, symbol, formatDisplay, onExportPDF, is
 
         {/* Metrics */}
         <div className="space-y-4">
-          <div className="flex justify-between items-center border-b border-border pb-2">
-            <div className="flex items-center gap-2">
+          <div className="flex justify-between items-center border-b border-border pb-2 gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-sm text-text-secondary">Total Invested</span>
               <Tooltip text="Sum of all cash outflows including down payment, installments, and additional costs." />
             </div>
-            <span className="text-sm font-mono text-text-primary">
-              {symbol} {formatDisplay(result.totalInvested)}
+            <span className="text-sm font-mono text-text-primary truncate text-right" title={`${symbol} ${formatDisplay(result.totalInvested)}`}>
+              {symbol} {formatCompact(result.totalInvested)}
             </span>
           </div>
-          <div className="flex justify-between items-center border-b border-border pb-2">
-            <div className="flex items-center gap-2">
+          <div className="flex justify-between items-center border-b border-border pb-2 gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-sm text-text-secondary">Net Profit</span>
               <Tooltip text="Your total return after deducting all investments and closing costs from the projected sale price." />
             </div>
-            <span className={`text-sm font-mono ${result.netProfit >= 0 ? 'text-primary' : 'text-negative'}`}>
-              {result.netProfit >= 0 ? '+' : ''}{symbol} {formatDisplay(Math.abs(result.netProfit))}
+            <span className={`text-sm font-mono truncate text-right ${result.netProfit >= 0 ? 'text-primary' : 'text-negative'}`} title={`${result.netProfit >= 0 ? '+' : ''}${symbol} ${formatDisplay(Math.abs(result.netProfit))}`}>
+              {result.netProfit >= 0 ? '+' : ''}{symbol} {formatCompact(result.netProfit)}
             </span>
           </div>
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span className="text-sm text-text-secondary">Investment Period</span>
-              <Tooltip text="Time from your first payment (purchase date) until the projected sale date." />
+              <Tooltip text="Time from your first payment date until the projected sale date." />
             </div>
             <span className="text-sm text-text-primary">{result.holdPeriodMonths} Months</span>
           </div>

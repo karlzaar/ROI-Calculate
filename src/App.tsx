@@ -48,7 +48,7 @@ function App() {
         </div>
       </main>
 
-      <Footer />
+      <Footer onSelectCalculator={handleCalculatorChange} />
     </div>
   );
 }

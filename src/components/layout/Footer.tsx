@@ -1,22 +1,32 @@
-export function Footer() {
+interface FooterProps {
+  onSelectCalculator?: (id: string) => void;
+}
+
+export function Footer({ onSelectCalculator }: FooterProps) {
   const currentYear = new Date().getFullYear();
 
+  const handleToolClick = (calculatorId: string) => {
+    if (onSelectCalculator) {
+      onSelectCalculator(calculatorId);
+      // Scroll to top to show the calculator
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <footer className="bg-slate-900 text-slate-300">
+    <footer className="bg-[#1a1f2e] text-slate-300">
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 md:px-10 lg:px-20 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand Section */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <img
-                src="/logo.png"
-                alt="BaliInvest Logo"
-                className="w-12 h-12 rounded-lg"
-              />
+              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold text-lg">ROI</span>
+              </div>
               <div>
                 <h3 className="text-white font-bold text-lg">BaliInvest</h3>
-                <p className="text-xs text-slate-400">Property Investment Tools</p>
+                <p className="text-xs text-primary">Property Investment Tools</p>
               </div>
             </div>
             <p className="text-sm text-slate-400 leading-relaxed">
@@ -30,16 +40,22 @@ export function Footer() {
             <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Tools</h4>
             <ul className="space-y-3">
               <li>
-                <span className="text-sm flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base text-slate-400">trending_up</span>
+                <button
+                  onClick={() => handleToolClick('xirr')}
+                  className="text-sm flex items-center gap-2 hover:text-primary transition-colors cursor-pointer group"
+                >
+                  <span className="material-symbols-outlined text-base text-primary group-hover:scale-110 transition-transform">trending_up</span>
                   XIRR Calculator
-                </span>
+                </button>
               </li>
               <li>
-                <span className="text-sm flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base text-slate-400">home_work</span>
+                <button
+                  onClick={() => handleToolClick('rental-roi')}
+                  className="text-sm flex items-center gap-2 hover:text-primary transition-colors cursor-pointer group"
+                >
+                  <span className="material-symbols-outlined text-base text-primary group-hover:scale-110 transition-transform">home_work</span>
                   Annualized ROI
-                </span>
+                </button>
               </li>
             </ul>
           </div>
@@ -49,13 +65,13 @@ export function Footer() {
             <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Contact</h4>
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-sm">
-                <span className="material-symbols-outlined text-base text-slate-400">mail</span>
-                <a href="mailto:info@baliinvest.com" className="hover:text-white transition-colors">
+                <span className="material-symbols-outlined text-base text-primary">mail</span>
+                <a href="mailto:info@baliinvest.com" className="hover:text-primary transition-colors">
                   info@baliinvest.com
                 </a>
               </li>
               <li className="flex items-center gap-2 text-sm">
-                <span className="material-symbols-outlined text-base text-slate-400">location_on</span>
+                <span className="material-symbols-outlined text-base text-primary">location_on</span>
                 <span>Bali, Indonesia</span>
               </li>
             </ul>
@@ -64,7 +80,7 @@ export function Footer() {
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-slate-800">
+      <div className="border-t border-slate-700/50">
         <div className="max-w-7xl mx-auto px-4 md:px-10 lg:px-20 py-6">
           <p className="text-sm text-slate-400 text-center">
             © {currentYear} BaliInvest. All rights reserved.
@@ -73,7 +89,7 @@ export function Footer() {
       </div>
 
       {/* Disclaimer */}
-      <div className="bg-slate-950">
+      <div className="bg-[#141821]">
         <div className="max-w-7xl mx-auto px-4 md:px-10 lg:px-20 py-4">
           <p className="text-xs text-slate-500 text-center leading-relaxed">
             <strong className="text-slate-400">Disclaimer:</strong> The calculations and projections provided by BaliInvest tools are for informational purposes only and should not be considered as financial advice.

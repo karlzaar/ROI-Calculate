@@ -162,46 +162,32 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm relative">
-      {/* Left scroll indicator */}
-      <div
-        className={`absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-white via-white/80 to-transparent z-30 pointer-events-none transition-opacity duration-300 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}
-        style={{ left: '320px' }}
-      />
+      {/* Left scroll button */}
       {canScrollLeft && (
         <button
           onClick={() => scrollTo('left')}
-          className="absolute left-[330px] top-1/2 -translate-y-1/2 z-40 w-10 h-10 bg-white border border-slate-200 rounded-full shadow-lg flex items-center justify-center hover:bg-slate-50 hover:scale-110 transition-all duration-200 group"
+          className="absolute left-[340px] top-1/2 -translate-y-1/2 z-50 w-8 h-8 bg-white/95 border border-slate-300 rounded-full shadow-md flex items-center justify-center hover:bg-slate-50 hover:scale-110 transition-all duration-200 group"
           aria-label="Scroll left"
         >
-          <svg className="w-5 h-5 text-slate-600 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+          <svg className="w-4 h-4 text-slate-600 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
       )}
 
-      {/* Right scroll indicator */}
-      <div
-        className={`absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-white via-white/80 to-transparent z-30 pointer-events-none transition-opacity duration-300 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}
-        style={{ right: '160px' }}
-      />
+      {/* Right scroll button */}
       {canScrollRight && (
         <button
           onClick={() => scrollTo('right')}
-          className="absolute right-[170px] top-1/2 -translate-y-1/2 z-40 w-10 h-10 bg-white border border-slate-200 rounded-full shadow-lg flex items-center justify-center hover:bg-slate-50 hover:scale-110 transition-all duration-200 group animate-pulse"
+          className="absolute right-[180px] top-1/2 -translate-y-1/2 z-50 w-8 h-8 bg-indigo-600 border border-indigo-700 rounded-full shadow-md flex items-center justify-center hover:bg-indigo-700 hover:scale-110 transition-all duration-200 group"
           aria-label="Scroll right"
         >
-          <svg className="w-5 h-5 text-slate-600 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
           </svg>
         </button>
       )}
 
-      {/* Scroll hint text */}
-      {canScrollRight && (
-        <div className="absolute top-2 right-[180px] z-40 bg-indigo-600 text-white text-xs px-3 py-1 rounded-full shadow-md animate-bounce">
-          Scroll for more →
-        </div>
-      )}
 
       <div ref={scrollContainerRef} className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left text-[13px] border-separate border-spacing-0 min-w-[1900px] table-fixed">
