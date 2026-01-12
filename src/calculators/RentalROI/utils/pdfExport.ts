@@ -50,15 +50,30 @@ function formatCompact(value: number, currency: CurrencyConfig): string {
   const absVal = Math.abs(value);
   const sign = value < 0 ? '-' : '';
   if (absVal >= 1000000000) {
-    return `${sign}${currency.symbol} ${(absVal / 1000000000).toFixed(1)}B`;
+    return `${sign}${currency.symbol}${(absVal / 1000000000).toFixed(1)}B`;
   }
   if (absVal >= 1000000) {
-    return `${sign}${currency.symbol} ${(absVal / 1000000).toFixed(1)}M`;
+    return `${sign}${currency.symbol}${(absVal / 1000000).toFixed(1)}M`;
   }
   if (absVal >= 1000) {
-    return `${sign}${currency.symbol} ${(absVal / 1000).toFixed(0)}K`;
+    return `${sign}${currency.symbol}${(absVal / 1000).toFixed(0)}K`;
   }
-  return `${sign}${currency.symbol} ${absVal.toFixed(0)}`;
+  return `${sign}${currency.symbol}${absVal.toFixed(0)}`;
+}
+
+// Helper to cap percentages to reasonable bounds
+function capPercent(value: number, max: number = 999): string {
+  if (!isFinite(value) || isNaN(value)) return '0.0';
+  const capped = Math.max(-max, Math.min(max, value));
+  return capped.toFixed(1);
+}
+
+// Helper to calculate growth with bounds
+function calcGrowth(y1: number, y10: number): number {
+  if (y1 === 0 || !isFinite(y1) || !isFinite(y10)) return 0;
+  const growth = ((y10 - y1) / Math.abs(y1)) * 100;
+  // Cap at +/- 999%
+  return Math.max(-999, Math.min(999, growth));
 }
 
 export function generateRentalROIPDF(options: PDFExportOptions): void {
@@ -71,7 +86,7 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
   const contentWidth = pageWidth - margin * 2;
   let yPos = margin;
 
-  // Calculate metrics
+  // Calculate metrics with bounds checking
   const totalRevenue = data.reduce((s, i) => s + i.totalRevenue, 0);
   const totalProfit = data.reduce((s, i) => s + i.takeHomeProfit, 0);
   const avgProfit = totalProfit / data.length;
@@ -86,10 +101,8 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
   // ========================================
-  // HEADER SECTION (matching XIRR)
+  // HEADER SECTION
   // ========================================
-
-  // Logo - ROI box
   const logoBoxSize = 12;
   doc.setFillColor(...COLORS.brandPurple);
   doc.roundedRect(margin, yPos, logoBoxSize, logoBoxSize, 2, 2, 'F');
@@ -98,17 +111,15 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
   doc.setFont('helvetica', 'bold');
   doc.text('ROI', margin + logoBoxSize / 2, yPos + 7.5, { align: 'center' });
 
-  // Logo - ROI Calculate text
   doc.setTextColor(...COLORS.textDark);
   doc.setFontSize(FONT.xl);
   doc.setFont('helvetica', 'bold');
   doc.text('ROI Calculate', margin + logoBoxSize + 4, yPos + 5);
 
-  // Logo - tagline
   doc.setTextColor(...COLORS.brandPurple);
   doc.setFontSize(FONT.xs);
   doc.setFont('helvetica', 'normal');
-  doc.text('Project rental property returns with 10-year cash flow projections', margin + logoBoxSize + 4, yPos + 10);
+  doc.text('Property Investment Tools', margin + logoBoxSize + 4, yPos + 10);
 
   // Right side - Generated date
   doc.setTextColor(...COLORS.textLight);
@@ -126,7 +137,7 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
 
   yPos += 18;
 
-  // Project name (large)
+  // Project name
   doc.setTextColor(...COLORS.textDark);
   doc.setFontSize(FONT.xxl);
   doc.setFont('helvetica', 'bold');
@@ -141,41 +152,37 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
   yPos += 8;
 
   // ========================================
-  // KEY METRICS ROW (5 boxes like XIRR)
+  // KEY METRICS ROW (5 boxes)
   // ========================================
   const metricBoxWidth = (contentWidth - 8) / 5;
   const metricBoxHeight = 26;
 
-  // Draw container
   doc.setFillColor(...COLORS.cardBg);
   doc.roundedRect(margin, yPos, contentWidth, metricBoxHeight, 2, 2, 'F');
   doc.setDrawColor(...COLORS.border);
   doc.roundedRect(margin, yPos, contentWidth, metricBoxHeight, 2, 2, 'S');
 
   const metrics = [
-    { label: 'AVG NET YIELD', value: `${avgNetYield.toFixed(1)}%`, subtitle: 'Annual Return', isHighlight: true },
+    { label: 'AVG NET YIELD', value: `${capPercent(avgNetYield)}%`, subtitle: 'Annual Return', isHighlight: true },
     { label: '10Y NET PROFIT', value: formatCompact(totalProfit, currency), subtitle: 'Total Earnings', isHighlight: false },
     { label: 'AVG CASH FLOW', value: formatCompact(avgProfit, currency), subtitle: 'Per Year', isHighlight: false },
-    { label: 'GOP MARGIN', value: `${avgGopMargin.toFixed(1)}%`, subtitle: 'Avg Margin', isHighlight: false },
-    { label: 'PAYBACK', value: paybackYears < 99 ? `${paybackYears.toFixed(1)} Yrs` : 'N/A', subtitle: 'Investment Recovery', isHighlight: false },
+    { label: 'GOP MARGIN', value: `${capPercent(avgGopMargin)}%`, subtitle: 'Avg Margin', isHighlight: false },
+    { label: 'PAYBACK', value: paybackYears < 99 ? `${paybackYears.toFixed(1)} Yrs` : 'N/A', subtitle: 'Recovery', isHighlight: false },
   ];
 
   metrics.forEach((metric, i) => {
     const boxX = margin + i * (metricBoxWidth + 2);
 
-    // Vertical divider
     if (i > 0) {
       doc.setDrawColor(...COLORS.borderLight);
       doc.line(boxX - 1, yPos + 4, boxX - 1, yPos + metricBoxHeight - 4);
     }
 
-    // Label
     doc.setTextColor(...COLORS.textLight);
     doc.setFontSize(FONT.xs);
     doc.setFont('helvetica', 'normal');
     doc.text(metric.label, boxX + 3, yPos + 7);
 
-    // Value
     if (metric.isHighlight) {
       doc.setTextColor(...COLORS.primary);
     } else {
@@ -185,7 +192,6 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
     doc.setFont('helvetica', 'bold');
     doc.text(metric.value, boxX + 3, yPos + 15);
 
-    // Subtitle
     doc.setTextColor(...COLORS.textLight);
     doc.setFontSize(FONT.xs);
     doc.setFont('helvetica', 'normal');
@@ -210,10 +216,10 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
   doc.roundedRect(margin, yPos, contentWidth, paramBoxHeight, 2, 2, 'S');
 
   const params = [
-    { label: 'Initial Investment', value: formatCurrency(assumptions.initialInvestment, currency) },
+    { label: 'Initial Investment', value: formatCompact(assumptions.initialInvestment, currency) },
     { label: 'Property Keys', value: assumptions.keys.toString() },
     { label: 'Y1 Occupancy', value: `${assumptions.y1Occupancy}%` },
-    { label: 'Y1 ADR', value: formatCurrency(assumptions.y1ADR, currency) },
+    { label: 'Y1 ADR', value: formatCompact(assumptions.y1ADR, currency) },
     { label: 'ADR Growth', value: `${assumptions.adrGrowth}%` },
     { label: 'Base Year', value: assumptions.baseYear.toString() },
   ];
@@ -251,7 +257,6 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
   const tableWidth = colWidths.reduce((a, b) => a + b, 0);
   const rowHeight = 6.5;
 
-  // Table header
   doc.setFillColor(...COLORS.textDark);
   doc.rect(margin, yPos, tableWidth, rowHeight + 1, 'F');
   doc.setTextColor(...COLORS.white);
@@ -265,7 +270,6 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
   });
   yPos += rowHeight + 1;
 
-  // Table rows
   data.forEach((row, i) => {
     const isEven = i % 2 === 0;
     doc.setFillColor(isEven ? 255 : 248, isEven ? 255 : 250, isEven ? 255 : 252);
@@ -275,40 +279,33 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
     doc.setFontSize(FONT.sm);
     doc.setFont('helvetica', 'normal');
 
-    // Year
     doc.setTextColor(...COLORS.textDark);
     doc.text(`Y${row.year}`, cellX, yPos + 4.5);
     cellX += colWidths[0];
 
-    // Revenue
     doc.text(formatCompact(row.totalRevenue, currency), cellX, yPos + 4.5);
     cellX += colWidths[1];
 
-    // Expenses
     const totalExpenses = row.totalOperatingCost + row.totalUndistributedCost;
     doc.text(formatCompact(totalExpenses, currency), cellX, yPos + 4.5);
     cellX += colWidths[2];
 
-    // GOP
     doc.setTextColor(...COLORS.primary);
     doc.text(formatCompact(row.gop, currency), cellX, yPos + 4.5);
     cellX += colWidths[3];
 
-    // Management Fees
     doc.setTextColor(...COLORS.orange);
     doc.text(formatCompact(row.totalManagementFees, currency), cellX, yPos + 4.5);
     cellX += colWidths[4];
 
-    // Net Profit
     doc.setTextColor(row.takeHomeProfit >= 0 ? COLORS.primary[0] : COLORS.red[0], row.takeHomeProfit >= 0 ? COLORS.primary[1] : COLORS.red[1], row.takeHomeProfit >= 0 ? COLORS.primary[2] : COLORS.red[2]);
     doc.setFont('helvetica', 'bold');
     doc.text(formatCompact(row.takeHomeProfit, currency), cellX, yPos + 4.5);
     cellX += colWidths[5];
 
-    // ROI
     doc.setTextColor(...COLORS.textDark);
     doc.setFont('helvetica', 'normal');
-    doc.text(`${row.roiAfterManagement.toFixed(1)}%`, cellX, yPos + 4.5);
+    doc.text(`${capPercent(row.roiAfterManagement)}%`, cellX, yPos + 4.5);
 
     yPos += rowHeight;
   });
@@ -336,20 +333,20 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
   totalX += colWidths[4];
   doc.text(formatCompact(totalProfit, currency), totalX, yPos + 5);
   totalX += colWidths[5];
-  doc.text(`${avgNetYield.toFixed(1)}%`, totalX, yPos + 5);
+  doc.text(`${capPercent(avgNetYield)}%`, totalX, yPos + 5);
 
   yPos += rowHeight + 10;
 
   // ========================================
-  // Y1 vs Y10 COMPARISON
+  // Y1 vs Y10 COMPARISON (Fixed layout)
   // ========================================
   doc.setTextColor(...COLORS.textDark);
   doc.setFontSize(FONT.md);
   doc.setFont('helvetica', 'bold');
-  doc.text('Year 1 vs Year 10 Comparison', margin, yPos);
+  doc.text('Year 1 vs Year 10 Growth', margin, yPos);
   yPos += 5;
 
-  const compBoxHeight = 20;
+  const compBoxHeight = 24;
   doc.setFillColor(...COLORS.cardBg);
   doc.roundedRect(margin, yPos, contentWidth, compBoxHeight, 2, 2, 'F');
   doc.setDrawColor(...COLORS.border);
@@ -376,107 +373,96 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
     doc.setFont('helvetica', 'bold');
     doc.text(comp.label, cx, yPos + 6);
 
+    // Y1 value
     doc.setTextColor(...COLORS.textMedium);
     doc.setFontSize(FONT.xs);
     doc.setFont('helvetica', 'normal');
-
     if (comp.isPercent) {
-      doc.text(`Y1: ${comp.y1.toFixed(0)}%  →  Y10: ${comp.y10.toFixed(0)}%`, cx, yPos + 12);
+      doc.text(`Y1: ${comp.y1.toFixed(0)}%`, cx, yPos + 11);
+      doc.text(`Y10: ${comp.y10.toFixed(0)}%`, cx, yPos + 16);
     } else {
-      doc.text(`Y1: ${formatCompact(comp.y1, currency)}  →  Y10: ${formatCompact(comp.y10, currency)}`, cx, yPos + 12);
+      doc.text(`Y1: ${formatCompact(comp.y1, currency)}`, cx, yPos + 11);
+      doc.text(`Y10: ${formatCompact(comp.y10, currency)}`, cx, yPos + 16);
     }
 
-    // Growth percentage
-    const growth = comp.y1 !== 0 ? ((comp.y10 - comp.y1) / Math.abs(comp.y1)) * 100 : 0;
+    // Growth percentage (capped)
+    const growth = calcGrowth(comp.y1, comp.y10);
     doc.setTextColor(growth >= 0 ? COLORS.primary[0] : COLORS.red[0], growth >= 0 ? COLORS.primary[1] : COLORS.red[1], growth >= 0 ? COLORS.primary[2] : COLORS.red[2]);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${growth >= 0 ? '+' : ''}${growth.toFixed(0)}%`, cx, yPos + 17);
+    doc.text(`${growth >= 0 ? '+' : ''}${growth.toFixed(0)}%`, cx + compWidth - 18, yPos + 13);
   });
 
   yPos += compBoxHeight + 8;
 
   // ========================================
-  // REVENUE BREAKDOWN (Year 1)
+  // REVENUE & COST SUMMARY (Simplified)
   // ========================================
   doc.setTextColor(...COLORS.textDark);
   doc.setFontSize(FONT.md);
   doc.setFont('helvetica', 'bold');
-  doc.text('Revenue Breakdown (Year 1)', margin, yPos);
+  doc.text('Year 1 Revenue & Cost Breakdown', margin, yPos);
   yPos += 5;
 
-  const revenueBoxHeight = 18;
+  const summaryHeight = 30;
   doc.setFillColor(...COLORS.cardBg);
-  doc.roundedRect(margin, yPos, contentWidth, revenueBoxHeight, 2, 2, 'F');
+  doc.roundedRect(margin, yPos, contentWidth, summaryHeight, 2, 2, 'F');
   doc.setDrawColor(...COLORS.border);
-  doc.roundedRect(margin, yPos, contentWidth, revenueBoxHeight, 2, 2, 'S');
+  doc.roundedRect(margin, yPos, contentWidth, summaryHeight, 2, 2, 'S');
 
-  const revenueItems = [
+  // Revenue items
+  const revItems = [
     { label: 'Rooms', value: y1Data.revenueRooms, pct: y1Data.revenueRoomsPercent },
     { label: 'F&B', value: y1Data.revenueFB, pct: y1Data.revenueFBPercent },
     { label: 'Spa', value: y1Data.revenueSpa, pct: y1Data.revenueSpaPercent },
-    { label: 'OODs', value: y1Data.revenueOODs, pct: y1Data.revenueOODsPercent },
-    { label: 'Misc', value: y1Data.revenueMisc, pct: y1Data.revenueMiscPercent },
+    { label: 'Other', value: y1Data.revenueOODs + y1Data.revenueMisc, pct: y1Data.revenueOODsPercent + y1Data.revenueMiscPercent },
   ];
 
-  const revWidth = contentWidth / 5;
-  revenueItems.forEach((rev, i) => {
-    const rx = margin + 4 + i * revWidth;
-    if (i > 0) {
-      doc.setDrawColor(...COLORS.borderLight);
-      doc.line(rx - 2, yPos + 3, rx - 2, yPos + revenueBoxHeight - 3);
-    }
-    doc.setTextColor(...COLORS.textLight);
-    doc.setFontSize(FONT.xs);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${rev.label} (${rev.pct.toFixed(0)}%)`, rx, yPos + 7);
-    doc.setTextColor(...COLORS.textDark);
-    doc.setFontSize(FONT.sm);
-    doc.setFont('helvetica', 'bold');
-    doc.text(formatCompact(rev.value, currency), rx, yPos + 13);
-  });
-
-  yPos += revenueBoxHeight + 6;
-
-  // ========================================
-  // COST STRUCTURE (Year 1)
-  // ========================================
-  doc.setTextColor(...COLORS.textDark);
-  doc.setFontSize(FONT.md);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Cost Structure (Year 1)', margin, yPos);
-  yPos += 5;
-
-  const costBoxHeight = 18;
-  doc.setFillColor(...COLORS.cardBg);
-  doc.roundedRect(margin, yPos, contentWidth, costBoxHeight, 2, 2, 'F');
-  doc.setDrawColor(...COLORS.border);
-  doc.roundedRect(margin, yPos, contentWidth, costBoxHeight, 2, 2, 'S');
-
+  // Cost items
   const costItems = [
-    { label: 'Operating Costs', value: y1Data.totalOperatingCost, pct: y1Data.operatingCostPercent },
-    { label: 'Undistributed', value: y1Data.totalUndistributedCost, pct: y1Data.undistributedCostPercent },
-    { label: 'CAM Fee', value: y1Data.feeCAM, pct: y1Data.feeCAMPercent },
-    { label: 'Base Mgmt', value: y1Data.feeBase, pct: y1Data.feeBasePercent },
-    { label: 'Other Fees', value: y1Data.feeTech + y1Data.feeIncentive, pct: y1Data.feeTechPercent + y1Data.feeIncentivePercent },
+    { label: 'Operating', value: y1Data.totalOperatingCost, pct: y1Data.operatingCostPercent },
+    { label: 'Undist.', value: y1Data.totalUndistributedCost, pct: y1Data.undistributedCostPercent },
+    { label: 'Mgmt Fees', value: y1Data.totalManagementFees, pct: y1Data.managementFeesPercent },
   ];
 
-  costItems.forEach((cost, i) => {
-    const cx = margin + 4 + i * revWidth;
-    if (i > 0) {
-      doc.setDrawColor(...COLORS.borderLight);
-      doc.line(cx - 2, yPos + 3, cx - 2, yPos + costBoxHeight - 3);
-    }
-    doc.setTextColor(...COLORS.textLight);
+  // Revenue row
+  doc.setTextColor(...COLORS.textLight);
+  doc.setFontSize(FONT.xs);
+  doc.setFont('helvetica', 'bold');
+  doc.text('REVENUE', margin + 4, yPos + 6);
+
+  const revColWidth = (contentWidth - 50) / 4;
+  revItems.forEach((item, i) => {
+    const rx = margin + 40 + i * revColWidth;
+    doc.setTextColor(...COLORS.textMedium);
     doc.setFontSize(FONT.xs);
     doc.setFont('helvetica', 'normal');
-    doc.text(`${cost.label} (${cost.pct.toFixed(0)}%)`, cx, yPos + 7);
-    doc.setTextColor(...COLORS.red);
-    doc.setFontSize(FONT.sm);
+    doc.text(`${item.label} (${capPercent(item.pct, 100)}%)`, rx, yPos + 6);
+    doc.setTextColor(...COLORS.textDark);
     doc.setFont('helvetica', 'bold');
-    doc.text(formatCompact(cost.value, currency), cx, yPos + 13);
+    doc.text(formatCompact(item.value, currency), rx, yPos + 12);
   });
 
-  yPos += costBoxHeight + 8;
+  // Divider
+  doc.setDrawColor(...COLORS.borderLight);
+  doc.line(margin + 4, yPos + 15, pageWidth - margin - 4, yPos + 15);
+
+  // Cost row
+  doc.setTextColor(...COLORS.textLight);
+  doc.setFontSize(FONT.xs);
+  doc.setFont('helvetica', 'bold');
+  doc.text('COSTS', margin + 4, yPos + 20);
+
+  const costColWidth = (contentWidth - 50) / 3;
+  costItems.forEach((item, i) => {
+    const cx = margin + 40 + i * costColWidth;
+    doc.setTextColor(...COLORS.textMedium);
+    doc.setFontSize(FONT.xs);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${item.label} (${capPercent(item.pct, 100)}%)`, cx, yPos + 20);
+    doc.setTextColor(...COLORS.red);
+    doc.setFont('helvetica', 'bold');
+    doc.text(formatCompact(item.value, currency), cx, yPos + 26);
+  });
 
   // ========================================
   // FOOTER
