@@ -154,16 +154,16 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
   // ========================================
   // AI DEAL ANALYZER SECTION
   // ========================================
-  const aiBoxHeight = 36;
+  const aiBoxHeight = 32;
 
   // Compute deal rating based on avg net yield
   const getDealRating = () => {
-    if (avgNetYield >= 15) return { grade: 'A+', label: 'Excellent Deal', color: COLORS.primary, confidence: 90 };
-    if (avgNetYield >= 12) return { grade: 'A', label: 'Great Deal', color: COLORS.primary, confidence: 85 };
-    if (avgNetYield >= 9) return { grade: 'OK', label: 'Good Deal', color: COLORS.primary, confidence: 75 };
+    if (avgNetYield >= 15) return { grade: 'A+', label: 'Excellent', color: COLORS.primary, confidence: 90 };
+    if (avgNetYield >= 12) return { grade: 'A', label: 'Great', color: COLORS.primary, confidence: 85 };
+    if (avgNetYield >= 9) return { grade: 'OK', label: 'Good', color: COLORS.primary, confidence: 75 };
     if (avgNetYield >= 6) return { grade: 'OK', label: 'Average', color: COLORS.orange, confidence: 65 };
-    if (avgNetYield >= 3) return { grade: 'C', label: 'Below Average', color: COLORS.orange, confidence: 60 };
-    return { grade: 'D', label: 'Poor Deal', color: COLORS.red, confidence: 50 };
+    if (avgNetYield >= 3) return { grade: 'C', label: 'Below Avg', color: COLORS.orange, confidence: 60 };
+    return { grade: 'D', label: 'Poor', color: COLORS.red, confidence: 50 };
   };
 
   const dealRating = getDealRating();
@@ -173,7 +173,7 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
 
   // Appreciation assessment
   const totalGrowthPct = calcGrowth(y1Data.takeHomeProfit, y10Data.takeHomeProfit);
-  const appreciationType = totalGrowthPct >= 100 ? 'High Growth' : totalGrowthPct >= 50 ? 'Moderate Growth' : totalGrowthPct >= 0 ? 'Stable' : 'Declining';
+  const appreciationType = totalGrowthPct >= 100 ? 'High Growth' : totalGrowthPct >= 50 ? 'Moderate' : totalGrowthPct >= 0 ? 'Stable' : 'Declining';
 
   // Main card background
   doc.setFillColor(...COLORS.cardBg);
@@ -181,10 +181,10 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
   doc.setDrawColor(...COLORS.border);
   doc.roundedRect(margin, yPos, contentWidth, aiBoxHeight, 3, 3, 'S');
 
-  // Left section - Rating circle
-  const circleX = margin + 18;
-  const circleY = yPos + aiBoxHeight / 2;
-  const circleRadius = 10;
+  // Left section - Rating circle (smaller, centered vertically)
+  const circleX = margin + 16;
+  const circleY = yPos + 12;
+  const circleRadius = 8;
 
   // Circle background
   doc.setFillColor(...COLORS.primaryLight);
@@ -192,89 +192,80 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
 
   // Circle border
   doc.setDrawColor(...dealRating.color);
-  doc.setLineWidth(1.5);
+  doc.setLineWidth(1.2);
   doc.circle(circleX, circleY, circleRadius, 'S');
   doc.setLineWidth(0.2);
 
   // Grade text in circle
   doc.setTextColor(...dealRating.color);
-  doc.setFontSize(FONT.md);
+  doc.setFontSize(FONT.base);
   doc.setFont('helvetica', 'bold');
-  doc.text(dealRating.grade, circleX, circleY + 1, { align: 'center' });
+  doc.text(dealRating.grade, circleX, circleY + 1.5, { align: 'center' });
 
-  // "DEAL RATING" label below circle
+  // Rating info below circle (within box)
   doc.setTextColor(...COLORS.textLight);
   doc.setFontSize(FONT.xs - 1);
   doc.setFont('helvetica', 'normal');
-  doc.text('DEAL RATING', circleX, circleY + circleRadius + 5, { align: 'center' });
+  doc.text('DEAL RATING', circleX, yPos + 24, { align: 'center' });
 
-  // Rating label (e.g., "Below Average")
   doc.setTextColor(...dealRating.color);
-  doc.setFontSize(FONT.sm);
+  doc.setFontSize(FONT.xs);
   doc.setFont('helvetica', 'bold');
-  doc.text(dealRating.label, circleX, circleY + circleRadius + 10, { align: 'center' });
-
-  // Confidence text
-  doc.setTextColor(...COLORS.textLight);
-  doc.setFontSize(FONT.xs - 1);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`AI Confidence: ${dealRating.confidence}%`, circleX, circleY + circleRadius + 14, { align: 'center' });
+  doc.text(dealRating.label, circleX, yPos + 28, { align: 'center' });
 
   // Vertical separator
-  const sepX = margin + 42;
+  const sepX = margin + 34;
   doc.setDrawColor(...COLORS.borderLight);
-  doc.line(sepX, yPos + 5, sepX, yPos + aiBoxHeight - 5);
+  doc.line(sepX, yPos + 4, sepX, yPos + aiBoxHeight - 4);
 
   // Right section - AI summary
-  const rightX = sepX + 6;
+  const rightX = sepX + 5;
 
   // Title + BETA badge
   doc.setTextColor(...COLORS.textDark);
-  doc.setFontSize(FONT.md);
+  doc.setFontSize(FONT.base);
   doc.setFont('helvetica', 'bold');
-  doc.text('AI Deal Analyzer Summary', rightX, yPos + 9);
+  doc.text('AI Deal Analyzer', rightX, yPos + 8);
 
   // BETA badge
-  const badgeX = rightX + 48;
+  const badgeX = rightX + 32;
   doc.setFillColor(...COLORS.primary);
-  doc.roundedRect(badgeX, yPos + 4, 14, 6, 1, 1, 'F');
+  doc.roundedRect(badgeX, yPos + 4, 12, 5, 1, 1, 'F');
   doc.setTextColor(...COLORS.white);
   doc.setFontSize(FONT.xs - 1);
   doc.setFont('helvetica', 'bold');
-  doc.text('BETA', badgeX + 7, yPos + 8.5, { align: 'center' });
+  doc.text('BETA', badgeX + 6, yPos + 7.5, { align: 'center' });
 
-  // AI-generated description
+  // AI-generated description (shorter)
   doc.setTextColor(...COLORS.textMedium);
-  doc.setFontSize(FONT.sm);
+  doc.setFontSize(FONT.xs);
   doc.setFont('helvetica', 'normal');
-  const aiDesc1 = `This ${assumptions.keys}-key property shows ${dealRating.label.toLowerCase()} potential with projected ${capPercent(avgNetYield)}% avg net yield over 10 years.`;
-  const aiDesc2 = `Estimated payback in ${paybackYears < 99 ? paybackYears.toFixed(1) : '10+'} years with ${appreciationType.toLowerCase()} cash flow trajectory.`;
-  doc.text(aiDesc1, rightX, yPos + 16);
-  doc.text(aiDesc2, rightX, yPos + 21);
+  const aiDesc = `${assumptions.keys}-key property with ${capPercent(avgNetYield)}% avg yield. Payback: ${paybackYears < 99 ? paybackYears.toFixed(1) : '10+'}yrs. AI Confidence: ${dealRating.confidence}%`;
+  doc.text(aiDesc, rightX, yPos + 15);
 
-  // Pills at bottom
-  const pillY = yPos + 28;
+  // Pills row
+  const pillY = yPos + 21;
   const pillHeight = 5;
 
   // Appreciation pill
   doc.setFillColor(245, 245, 245);
-  doc.roundedRect(rightX, pillY, 30, pillHeight, 1.5, 1.5, 'F');
+  doc.roundedRect(rightX, pillY, 22, pillHeight, 1.5, 1.5, 'F');
   doc.setTextColor(...COLORS.textMedium);
   doc.setFontSize(FONT.xs - 1);
   doc.setFont('helvetica', 'normal');
-  doc.text(appreciationType, rightX + 15, pillY + 3.5, { align: 'center' });
+  doc.text(appreciationType, rightX + 11, pillY + 3.5, { align: 'center' });
 
   // Period pill
   doc.setFillColor(245, 245, 245);
-  doc.roundedRect(rightX + 34, pillY, 28, pillHeight, 1.5, 1.5, 'F');
-  doc.text(`Period: 10 Years`, rightX + 48, pillY + 3.5, { align: 'center' });
+  doc.roundedRect(rightX + 25, pillY, 22, pillHeight, 1.5, 1.5, 'F');
+  doc.text('10 Years', rightX + 36, pillY + 3.5, { align: 'center' });
 
   // Risk pill
   doc.setFillColor(245, 245, 245);
-  doc.roundedRect(rightX + 66, pillY, 22, pillHeight, 1.5, 1.5, 'F');
-  doc.text(`Risk: ${riskLevel}`, rightX + 77, pillY + 3.5, { align: 'center' });
+  doc.roundedRect(rightX + 50, pillY, 20, pillHeight, 1.5, 1.5, 'F');
+  doc.text(`Risk: ${riskLevel}`, rightX + 60, pillY + 3.5, { align: 'center' });
 
-  yPos += aiBoxHeight + 8;
+  yPos += aiBoxHeight + 6;
 
   // ========================================
   // KEY METRICS ROW (5 boxes)
@@ -517,16 +508,38 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
     doc.text(`${growth >= 0 ? '+' : ''}${growth.toFixed(0)}%`, cx + compWidth - 18, yPos + 13);
   });
 
-  yPos += compBoxHeight + 8;
+  yPos += compBoxHeight + 6;
 
   // ========================================
-  // REVENUE & COST SUMMARY (Simplified)
+  // FOOTER - PAGE 1
   // ========================================
+  const footerY = pageHeight - 10;
+  doc.setDrawColor(...COLORS.border);
+  doc.line(margin, footerY - 3, pageWidth - margin, footerY - 3);
+
+  doc.setTextColor(...COLORS.textLight);
+  doc.setFontSize(FONT.xs);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Generated by ROI Calculate - Property Investment Tools', margin, footerY);
+  doc.text('Page 1 of 2', pageWidth / 2, footerY, { align: 'center' });
+  doc.text(new Date().toLocaleDateString(), pageWidth - margin, footerY, { align: 'right' });
+
+  // ========================================
+  // PAGE 2 - Detailed Breakdown
+  // ========================================
+  doc.addPage();
+  yPos = margin;
+
+  // Page 2 background
+  doc.setFillColor(...COLORS.background);
+  doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+  // Page 2 header
   doc.setTextColor(...COLORS.textDark);
-  doc.setFontSize(FONT.md);
+  doc.setFontSize(FONT.lg);
   doc.setFont('helvetica', 'bold');
-  doc.text('Year 1 Revenue & Cost Breakdown', margin, yPos);
-  yPos += 5;
+  doc.text('Year 1 Revenue & Cost Breakdown', margin, yPos + 6);
+  yPos += 12;
 
   const summaryHeight = 30;
   doc.setFillColor(...COLORS.cardBg);
@@ -589,19 +602,65 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
     doc.text(formatCompact(item.value, currency), cx, yPos + 26);
   });
 
+  yPos += summaryHeight + 12;
+
   // ========================================
-  // FOOTER
+  // YEARLY PERFORMANCE BREAKDOWN
   // ========================================
-  const footerY = pageHeight - 10;
+  doc.setTextColor(...COLORS.textDark);
+  doc.setFontSize(FONT.lg);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Performance Summary by Year', margin, yPos);
+  yPos += 8;
+
+  // Performance grid - 2x5 layout
+  const perfBoxWidth = (contentWidth - 4) / 5;
+  const perfBoxHeight = 22;
+
+  data.forEach((row, i) => {
+    const colIndex = i % 5;
+    const rowIndex = Math.floor(i / 5);
+    const px = margin + colIndex * (perfBoxWidth + 1);
+    const py = yPos + rowIndex * (perfBoxHeight + 2);
+
+    // Box background
+    doc.setFillColor(...COLORS.cardBg);
+    doc.roundedRect(px, py, perfBoxWidth, perfBoxHeight, 2, 2, 'F');
+    doc.setDrawColor(...COLORS.border);
+    doc.roundedRect(px, py, perfBoxWidth, perfBoxHeight, 2, 2, 'S');
+
+    // Year label
+    doc.setTextColor(...COLORS.textLight);
+    doc.setFontSize(FONT.xs);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`YEAR ${row.year}`, px + 3, py + 5);
+
+    // Net Profit
+    doc.setTextColor(row.takeHomeProfit >= 0 ? COLORS.primary[0] : COLORS.red[0], row.takeHomeProfit >= 0 ? COLORS.primary[1] : COLORS.red[1], row.takeHomeProfit >= 0 ? COLORS.primary[2] : COLORS.red[2]);
+    doc.setFontSize(FONT.sm);
+    doc.setFont('helvetica', 'bold');
+    doc.text(formatCompact(row.takeHomeProfit, currency), px + 3, py + 12);
+
+    // ROI
+    doc.setTextColor(...COLORS.textMedium);
+    doc.setFontSize(FONT.xs);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`ROI: ${capPercent(row.roiAfterManagement)}%`, px + 3, py + 18);
+  });
+
+  // ========================================
+  // FOOTER - PAGE 2
+  // ========================================
+  const footer2Y = pageHeight - 10;
   doc.setDrawColor(...COLORS.border);
-  doc.line(margin, footerY - 3, pageWidth - margin, footerY - 3);
+  doc.line(margin, footer2Y - 3, pageWidth - margin, footer2Y - 3);
 
   doc.setTextColor(...COLORS.textLight);
   doc.setFontSize(FONT.xs);
   doc.setFont('helvetica', 'normal');
-  doc.text('Generated by ROI Calculate - Property Investment Tools', margin, footerY);
-  doc.text('Page 1 of 1', pageWidth / 2, footerY, { align: 'center' });
-  doc.text(new Date().toLocaleDateString(), pageWidth - margin, footerY, { align: 'right' });
+  doc.text('Generated by ROI Calculate - Property Investment Tools', margin, footer2Y);
+  doc.text('Page 2 of 2', pageWidth / 2, footer2Y, { align: 'center' });
+  doc.text(new Date().toLocaleDateString(), pageWidth - margin, footer2Y, { align: 'right' });
 
   // Save PDF
   const fileName = `ROI_Calculate_${(projectName || 'Analysis').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
