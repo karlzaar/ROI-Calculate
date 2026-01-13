@@ -88,7 +88,7 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
         { label: 'Rooms Revenue', key: 'revenueRooms', type: 'curr', indent: true },
         { label: 'Food & Beverage', key: 'revenueFB', type: 'curr', indent: true },
         { label: 'Wellness & Spa', key: 'revenueSpa', type: 'curr', indent: true },
-        { label: 'TOTAL GROSS REVENUE', key: 'totalRevenue', type: 'curr', bold: true },
+        { label: 'Total Gross Revenue', key: 'totalRevenue', type: 'curr', bold: true },
       ]
     },
     {
@@ -98,7 +98,7 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
         { label: 'F&B Operations', key: 'costFB', type: 'curr', indent: true },
         { label: 'Wellness/Spa Cost', key: 'costSpa', type: 'curr', indent: true },
         { label: 'Utilities & General', key: 'costUtilities', type: 'curr', indent: true },
-        { label: 'TOTAL DIRECT EXPENSES', key: 'totalOperatingCost', type: 'curr', bold: true, color: 'text-red-500' },
+        { label: 'Total Direct Expenses', key: 'totalOperatingCost', type: 'curr', bold: true, color: 'text-red-500' },
       ]
     },
     {
@@ -107,14 +107,14 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
         { label: 'Admin & General', key: 'undistributedAdmin', type: 'curr', indent: true },
         { label: 'Sales & Marketing', key: 'undistributedSales', type: 'curr', indent: true },
         { label: 'Property Ops', key: 'undistributedMaintenance', type: 'curr', indent: true },
-        { label: 'TOTAL UNDISTRIBUTED', key: 'totalUndistributedCost', type: 'curr', bold: true, color: 'text-red-500' },
+        { label: 'Total Undistributed', key: 'totalUndistributedCost', type: 'curr', bold: true, color: 'text-red-500' },
       ]
     },
     {
       title: 'Operational Profitability',
       isExpandedByDefault: true,
       rows: [
-        { label: 'GROSS OPERATING PROFIT (GOP)', key: 'gop', type: 'curr', bold: true },
+        { label: 'Gross Operating Profit (GOP)', key: 'gop', type: 'curr', bold: true },
         { label: 'GOP Margin (%)', key: 'gopMargin', type: 'pct', indent: true },
       ]
     },
@@ -126,14 +126,14 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
         { label: 'Base Management Fee', key: 'feeBase', type: 'curr', indent: true },
         { label: 'Technology Fee', key: 'feeTech', type: 'curr', indent: true },
         { label: 'Incentive Fee', key: 'feeIncentive', type: 'curr', indent: true },
-        { label: 'TOTAL FEES & DEDUCTIONS', key: 'totalManagementFees', type: 'curr', bold: true, color: 'text-red-500' },
+        { label: 'Total Fees & Deductions', key: 'totalManagementFees', type: 'curr', bold: true, color: 'text-red-500' },
       ]
     },
     {
       title: 'Investor Returns & Net Cash Flow',
       isExpandedByDefault: true,
       rows: [
-        { label: 'TAKE HOME PROFIT (Owner Cash Flow)', key: 'takeHomeProfit', type: 'curr', bold: true },
+        { label: 'Take Home Profit (Owner Cash Flow)', key: 'takeHomeProfit', type: 'curr', bold: true },
         { label: 'Net Profit Margin (%)', key: 'profitMargin', type: 'pct', indent: true },
         { label: 'ROI - Gross Yield (Yield on Cost)', key: 'roiBeforeManagement', type: 'pct', bold: true },
         { label: 'ROI - Net Yield (Cash on Cash)', key: 'roiAfterManagement', type: 'pct', bold: true, color: 'text-blue-600 font-bold' },
