@@ -89,8 +89,6 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
         { label: 'Rooms Revenue', key: 'revenueRooms', type: 'curr', indent: true },
         { label: 'Food & Beverage', key: 'revenueFB', type: 'curr', indent: true },
         { label: 'Wellness & Spa', key: 'revenueSpa', type: 'curr', indent: true },
-        { label: 'Other Departments', key: 'revenueOODs', type: 'curr', indent: true },
-        { label: 'Miscellaneous', key: 'revenueMisc', type: 'curr', indent: true },
         { label: 'TOTAL GROSS REVENUE', key: 'totalRevenue', type: 'curr', bold: true },
       ]
     },
