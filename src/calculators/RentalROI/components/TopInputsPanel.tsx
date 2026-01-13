@@ -24,11 +24,17 @@ const TopInputsPanel: React.FC<Props> = ({ assumptions, onChange, currency }) =>
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 mb-8">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
+      <div className="mb-6 flex items-center border-b border-slate-200 pb-4">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-indigo-600">savings</span>
+          <h2 className="text-xl font-bold text-slate-900">Investment Overview</h2>
+        </div>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
         {/* Core Investment Section */}
         <section className="space-y-6">
-          <h3 className="text-base font-semibold text-slate-800 mb-4">Core Investment</h3>
+          <h3 className="text-sm font-semibold text-slate-700 mb-4">Core Investment</h3>
           <div className="grid grid-cols-1 gap-6">
             <TopInputGroup
               label={`Initial Capex (${currency.code})`}
@@ -53,7 +59,7 @@ const TopInputsPanel: React.FC<Props> = ({ assumptions, onChange, currency }) =>
 
         {/* Year 1 Targets Section */}
         <section className="space-y-6">
-          <h3 className="text-base font-semibold text-slate-800 mb-4">Year 1 Targets</h3>
+          <h3 className="text-sm font-semibold text-slate-700 mb-4">Year 1 Targets</h3>
           <div className="grid grid-cols-2 gap-x-6 gap-y-6">
             <TopInputGroup
               label="Occupancy %"

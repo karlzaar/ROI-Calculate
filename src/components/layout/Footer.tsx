@@ -28,7 +28,7 @@ export function Footer({ onSelectCalculator }: FooterProps) {
               />
               <div>
                 <h3 className="text-white font-bold text-lg">ROI Calculate</h3>
-                <p className="text-xs text-primary">Professional Property Investment Analysis</p>
+                <p className="text-xs text-white">Property Investment Tools</p>
               </div>
             </div>
             <p className="text-sm text-slate-400 leading-relaxed">

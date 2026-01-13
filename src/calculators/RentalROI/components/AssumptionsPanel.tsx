@@ -15,13 +15,15 @@ const AssumptionsPanel = ({ assumptions, onChange, currency }: Props) => {
   };
 
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm p-12 mt-12 mb-4">
-      <div className="flex items-center gap-4 mb-12">
-        <div className="w-1 h-6 bg-indigo-500 rounded-full"></div>
-        <h2 className="text-lg font-semibold text-slate-800">Operational Dynamics & Growth Variables</h2>
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm mt-6 mb-4">
+      <div className="mb-6 flex items-center border-b border-slate-200 pb-4">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-indigo-600">tune</span>
+          <h2 className="text-xl font-bold text-slate-900">Operational Assumptions</h2>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-24 gap-y-16">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-16 gap-y-10">
         {/* Cost Structure */}
         <section className="space-y-8">
           <div className="flex items-center gap-2.5">
