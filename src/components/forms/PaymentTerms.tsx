@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import type { PaymentTerms as PaymentTermsType, PaymentScheduleEntry } from '../../types/investment';
 import { Tooltip } from '../ui/Tooltip';
 
@@ -30,13 +31,6 @@ export function PaymentTerms({
   const downPaymentIDR = totalPriceIDR * (downPaymentPercent / 100);
 
   const hasSchedule = data.schedule && data.schedule.length > 0;
-  const scheduleTotalIDR = hasSchedule
-    ? data.schedule.reduce((sum, entry) => sum + entry.amount, 0)
-    : 0;
-  const scheduleTotalDisplay = idrToDisplay(scheduleTotalIDR);
-
-  const expectedRemainingIDR = totalPriceIDR * (1 - downPaymentPercent / 100);
-  const expectedRemainingDisplay = idrToDisplay(expectedRemainingIDR);
 
   const parseAmountInput = (value: string): number => {
     const digits = value.replace(/\D/g, '');
@@ -208,13 +202,13 @@ export function PaymentTerms({
             <p className="text-sm text-text-secondary">Due immediately upon signing.</p>
           </div>
 
-          {/* Remaining Payment Schedule */}
+          {/* Full Payment Schedule */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-lg">event_note</span>
-                <h3 className="font-bold text-text-primary">Remaining Payment Schedule</h3>
-                <Tooltip text="Schedule of installment payments after down payment. Each payment date and amount affects your XIRR calculation." />
+                <h3 className="font-bold text-text-primary">Payment Schedule</h3>
+                <Tooltip text="Complete schedule of all payments. Booking fee and down payment are shown first, followed by installments." />
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -228,96 +222,125 @@ export function PaymentTerms({
                   }}
                   className="w-14 rounded bg-surface-alt border border-border px-2 py-1.5 text-text-primary text-sm text-center focus:border-primary focus:outline-none"
                 />
-                <span className="text-sm text-text-secondary">months</span>
+                <span className="text-sm text-text-secondary">installments</span>
               </div>
             </div>
             <p className="text-xs text-text-muted mb-4">
-              Default schedule based on equal installments. You can customize each due date and amount below.
+              Complete payment breakdown showing booking fee, down payment, and installments.
             </p>
 
-            {!hasSchedule && totalPriceIDR > 0 && (
-              <div className="text-center py-6 text-text-secondary border border-dashed border-border rounded-lg">
-                <p className="text-sm">Change the number of months to generate schedule</p>
-              </div>
-            )}
-
-            {hasSchedule && (
+            {totalPriceIDR > 0 && (
               <div className="rounded-lg border border-border bg-surface-alt overflow-hidden">
                 {/* Table Header */}
                 <div className="grid grid-cols-12 text-xs font-semibold text-text-secondary uppercase bg-background py-3 px-4 border-b border-border">
                   <div className="col-span-1">#</div>
-                  <div className="col-span-5">Due Date</div>
-                  <div className="col-span-6 text-right">Amount</div>
+                  <div className="col-span-3">Type</div>
+                  <div className="col-span-4">Due Date</div>
+                  <div className="col-span-4 text-right">Amount</div>
                 </div>
 
                 {/* Payment Rows */}
-                <div className="max-h-64 overflow-y-auto">
+                <div className="max-h-80 overflow-y-auto">
                   {(() => {
-                    const displayAmounts: number[] = [];
-                    let runningSum = 0;
+                    const bookingFeeIDR = data.bookingFee || 0;
+                    const remainingDownPaymentIDR = Math.max(0, downPaymentIDR - bookingFeeIDR);
+                    const installmentTotalIDR = totalPriceIDR - bookingFeeIDR - remainingDownPaymentIDR;
 
-                    for (let i = 0; i < data.schedule.length; i++) {
-                      if (i === data.schedule.length - 1) {
-                        displayAmounts.push(scheduleTotalDisplay - runningSum);
-                      } else {
-                        const amt = idrToDisplay(data.schedule[i].amount);
-                        displayAmounts.push(amt);
-                        runningSum += amt;
-                      }
+                    let rowNumber = 0;
+                    const rows: ReactElement[] = [];
+
+                    // 1. Booking Fee (if any)
+                    if (bookingFeeIDR > 0) {
+                      rowNumber++;
+                      rows.push(
+                        <div key="booking-fee" className="grid grid-cols-12 items-center py-2 px-4 border-b border-border-light bg-amber-50/50">
+                          <div className="col-span-1 text-text-muted text-sm">{rowNumber}</div>
+                          <div className="col-span-3">
+                            <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded">Booking Fee</span>
+                          </div>
+                          <div className="col-span-4 text-text-primary text-sm">
+                            {data.bookingFeeDate || 'Date not set'}
+                          </div>
+                          <div className="col-span-4 flex items-center justify-end gap-1">
+                            <span className="text-text-muted text-sm">{symbol}</span>
+                            <span className="font-mono text-sm text-text-primary">{formatNumber(idrToDisplay(bookingFeeIDR))}</span>
+                          </div>
+                        </div>
+                      );
                     }
 
-                    return data.schedule.map((entry, i) => {
-                    const displayAmount = displayAmounts[i];
+                    // 2. Down Payment (remaining after booking fee)
+                    if (remainingDownPaymentIDR > 0) {
+                      rowNumber++;
+                      rows.push(
+                        <div key="down-payment" className="grid grid-cols-12 items-center py-2 px-4 border-b border-border-light bg-blue-50/50">
+                          <div className="col-span-1 text-text-muted text-sm">{rowNumber}</div>
+                          <div className="col-span-3">
+                            <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded">Down Payment</span>
+                          </div>
+                          <div className="col-span-4 text-text-primary text-sm">
+                            Upon signing
+                          </div>
+                          <div className="col-span-4 flex items-center justify-end gap-1">
+                            <span className="text-text-muted text-sm">{symbol}</span>
+                            <span className="font-mono text-sm text-text-primary">{formatNumber(idrToDisplay(remainingDownPaymentIDR))}</span>
+                          </div>
+                        </div>
+                      );
+                    }
 
-                    return (
-                      <div
-                        key={entry.id}
-                        className={`grid grid-cols-12 items-center py-2 px-4 ${
-                          i < data.schedule.length - 1 ? 'border-b border-border-light' : ''
-                        }`}
-                      >
-                        <div className="col-span-1 text-text-muted text-sm">{i + 1}</div>
-                        <div className="col-span-5">
-                          <input
-                            type="date"
-                            value={entry.date}
-                            onChange={(e) => onUpdateScheduleEntry(entry.id, { date: e.target.value })}
-                            className="w-full bg-background/50 border border-transparent text-text-primary text-sm rounded-md px-2 py-1.5 cursor-pointer hover:border-primary/50 hover:bg-background focus:outline-none focus:bg-background focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
-                          />
-                        </div>
-                        <div className="col-span-6 flex items-center justify-end gap-1">
-                          <span className="text-text-muted text-sm">{symbol}</span>
-                          <input
-                            type="text"
-                            value={formatNumber(displayAmount)}
-                            onChange={(e) => {
-                              const displayValue = parseAmountInput(e.target.value);
-                              const idrValue = displayToIdr(displayValue);
-                              onUpdateScheduleEntry(entry.id, { amount: idrValue });
-                            }}
-                            className="w-32 bg-background/50 border border-transparent text-text-primary font-mono text-sm text-right rounded-md px-2 py-1.5 cursor-pointer hover:border-primary/50 hover:bg-background focus:outline-none focus:bg-background focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
-                          />
-                        </div>
-                      </div>
-                    );
-                  });
+                    // 3. Installments
+                    if (hasSchedule && installmentTotalIDR > 0) {
+                      const numInstallments = data.schedule.length;
+                      const baseInstallment = Math.floor(installmentTotalIDR / numInstallments);
+                      const remainder = installmentTotalIDR - (baseInstallment * numInstallments);
+
+                      data.schedule.forEach((entry, i) => {
+                        rowNumber++;
+                        const isLast = i === numInstallments - 1;
+                        const installmentAmount = isLast ? baseInstallment + remainder : baseInstallment;
+
+                        rows.push(
+                          <div
+                            key={entry.id}
+                            className={`grid grid-cols-12 items-center py-2 px-4 ${
+                              i < data.schedule.length - 1 ? 'border-b border-border-light' : ''
+                            }`}
+                          >
+                            <div className="col-span-1 text-text-muted text-sm">{rowNumber}</div>
+                            <div className="col-span-3">
+                              <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">Installment {i + 1}</span>
+                            </div>
+                            <div className="col-span-4">
+                              <input
+                                type="date"
+                                value={entry.date}
+                                onChange={(e) => onUpdateScheduleEntry(entry.id, { date: e.target.value })}
+                                className="w-full bg-background/50 border border-transparent text-text-primary text-sm rounded-md px-2 py-1.5 cursor-pointer hover:border-primary/50 hover:bg-background focus:outline-none focus:bg-background focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
+                              />
+                            </div>
+                            <div className="col-span-4 flex items-center justify-end gap-1">
+                              <span className="text-text-muted text-sm">{symbol}</span>
+                              <span className="font-mono text-sm text-text-primary">{formatNumber(idrToDisplay(installmentAmount))}</span>
+                            </div>
+                          </div>
+                        );
+                      });
+                    }
+
+                    return rows;
                   })()}
                 </div>
 
                 {/* Total Row */}
                 <div className="grid grid-cols-12 items-center py-3 px-4 bg-background border-t border-border">
                   <div className="col-span-1"></div>
-                  <div className="col-span-5 text-text-secondary font-medium text-sm">
-                    Total Scheduled
-                    {scheduleTotalIDR !== expectedRemainingIDR && (
-                      <span className="ml-2 text-xs text-warning" title={`Schedule total doesn't match expected ${100 - downPaymentPercent}%`}>
-                        Expected: {symbol} {formatNumber(expectedRemainingDisplay)}
-                      </span>
-                    )}
+                  <div className="col-span-7 text-text-secondary font-medium text-sm">
+                    Total Investment
                   </div>
-                  <div className="col-span-6 text-right">
-                    <span className={`font-mono font-bold ${scheduleTotalIDR === expectedRemainingIDR ? 'text-primary' : 'text-warning'}`}>
-                      {symbol} {formatNumber(scheduleTotalDisplay)}
+                  <div className="col-span-4 text-right">
+                    <span className="font-mono font-bold text-primary">
+                      {symbol} {formatNumber(idrToDisplay(totalPriceIDR))}
                     </span>
                   </div>
                 </div>
