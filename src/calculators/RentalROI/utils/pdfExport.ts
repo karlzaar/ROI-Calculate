@@ -79,8 +79,27 @@ function formatCompactCurrency(val: number, currency: CurrencyConfig): string {
   }
 }
 
-export function generateRentalROIPDF(options: PDFExportOptions): void {
+// Helper to load image as base64
+async function loadLogoAsBase64(): Promise<string> {
+  try {
+    const response = await fetch('/logo.png');
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return '';
+  }
+}
+
+export async function generateRentalROIPDF(options: PDFExportOptions): Promise<void> {
   const { data, assumptions, currency, projectName } = options;
+
+  // Load logo
+  const logoBase64 = await loadLogoAsBase64();
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
@@ -106,23 +125,29 @@ export function generateRentalROIPDF(options: PDFExportOptions): void {
   // ========================================
   // HEADER SECTION
   // ========================================
-  const logoBoxSize = 12;
-  doc.setFillColor(...COLORS.brandPurple);
-  doc.roundedRect(margin, yPos, logoBoxSize, logoBoxSize, 2, 2, 'F');
-  doc.setTextColor(...COLORS.white);
-  doc.setFontSize(FONT.sm);
-  doc.setFont('helvetica', 'bold');
-  doc.text('ROI', margin + logoBoxSize / 2, yPos + 7.5, { align: 'center' });
+  const logoSize = 14;
+
+  // Add logo image if available, otherwise fallback to colored box
+  if (logoBase64) {
+    doc.addImage(logoBase64, 'PNG', margin, yPos - 1, logoSize, logoSize);
+  } else {
+    doc.setFillColor(...COLORS.brandPurple);
+    doc.roundedRect(margin, yPos, logoSize, logoSize, 2, 2, 'F');
+    doc.setTextColor(...COLORS.white);
+    doc.setFontSize(FONT.sm);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ROI', margin + logoSize / 2, yPos + 8, { align: 'center' });
+  }
 
   doc.setTextColor(...COLORS.textDark);
   doc.setFontSize(FONT.xl);
   doc.setFont('helvetica', 'bold');
-  doc.text('ROI Calculate', margin + logoBoxSize + 4, yPos + 5);
+  doc.text('ROI Calculate', margin + logoSize + 4, yPos + 5);
 
   doc.setTextColor(...COLORS.brandPurple);
   doc.setFontSize(FONT.xs);
   doc.setFont('helvetica', 'normal');
-  doc.text('Property Investment Tools', margin + logoBoxSize + 4, yPos + 10);
+  doc.text('Property Investment Tools', margin + logoSize + 4, yPos + 10);
 
   // Right side - Generated date
   doc.setTextColor(...COLORS.textLight);
