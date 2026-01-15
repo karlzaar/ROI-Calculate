@@ -241,9 +241,9 @@ const TopInputsPanel: React.FC<Props> = ({ assumptions, onChange, currency }) =>
           </div>
         </section>
 
-        {/* Year 1 Targets Section */}
+        {/* First Operational Year Section */}
         <section className="space-y-6">
-          <h3 className="text-base font-semibold text-slate-700 mb-4">Year 1 Targets</h3>
+          <h3 className="text-base font-semibold text-slate-700 mb-4">First Operational Year</h3>
           <div className="grid grid-cols-2 gap-x-6 gap-y-6">
             <TopInputGroup
               label="Occupancy %"
