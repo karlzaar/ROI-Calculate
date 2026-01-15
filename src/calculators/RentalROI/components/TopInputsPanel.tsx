@@ -154,7 +154,51 @@ const TopInputsPanel: React.FC<Props> = ({ assumptions, onChange, currency }) =>
   const [showOccupancyGrowth, setShowOccupancyGrowth] = useState(false);
 
   const handleChange = (field: keyof Assumptions, value: any) => {
-    onChange({ ...assumptions, [field]: value });
+    let updatedAssumptions = { ...assumptions, [field]: value };
+
+    // When propertyReadyDate changes, pre-fill occupancy increases with 0 for pre-operational years
+    if (field === 'propertyReadyDate' && value) {
+      const [readyYear] = value.split('-').map(Number);
+      const baseYear = assumptions.baseYear || new Date().getFullYear();
+
+      // Calculate which years are before the property becomes operational
+      // occupancyIncreases[0] = Y2, [1] = Y3, etc.
+      const newOccupancyIncreases = [...assumptions.occupancyIncreases];
+      for (let i = 0; i < 9; i++) {
+        const yearForIndex = baseYear + i + 1; // Y2 = baseYear + 1, Y3 = baseYear + 2, etc.
+        if (yearForIndex < readyYear) {
+          newOccupancyIncreases[i] = 0;
+        }
+      }
+      updatedAssumptions.occupancyIncreases = newOccupancyIncreases;
+    }
+
+    // When baseYear changes and propertyReadyDate is set, recalculate pre-filled zeros
+    if (field === 'baseYear' && assumptions.propertyReadyDate && !assumptions.isPropertyReady) {
+      const [readyYear] = assumptions.propertyReadyDate.split('-').map(Number);
+      const newBaseYear = value || new Date().getFullYear();
+
+      const newOccupancyIncreases = [...assumptions.occupancyIncreases];
+      for (let i = 0; i < 9; i++) {
+        const yearForIndex = newBaseYear + i + 1;
+        if (yearForIndex < readyYear) {
+          newOccupancyIncreases[i] = 0;
+        } else if (assumptions.occupancyIncreases[i] === 0) {
+          // Reset previously zeroed values if they're now operational years
+          newOccupancyIncreases[i] = null;
+        }
+      }
+      updatedAssumptions.occupancyIncreases = newOccupancyIncreases;
+    }
+
+    // When isPropertyReady is set to true (checkbox unchecked), clear the pre-filled zeros
+    if (field === 'isPropertyReady' && value === true) {
+      // Reset occupancy increases to null (will use placeholders)
+      updatedAssumptions.occupancyIncreases = [null, null, null, null, null, null, null, null, null];
+      updatedAssumptions.propertyReadyDate = '';
+    }
+
+    onChange(updatedAssumptions);
   };
 
   const handleOccupancyIncreaseChange = (index: number, value: number | null) => {
