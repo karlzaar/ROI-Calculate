@@ -36,9 +36,9 @@ export const EMPTY_ASSUMPTIONS: Assumptions = {
   salesPct: 0,
   maintPct: 0,
 
-  y1CAM: 0,
-  y1BaseFee: 0,
-  y1TechFee: 0,
+  camFeePerUnit: 0, // Monthly per-unit CAM fee
+  baseFeePercent: 0, // % of total revenue
+  techFeePerUnit: 0, // Monthly per-unit tech fee
   incentiveFeePct: 0
 };
 
@@ -77,9 +77,9 @@ export const PLACEHOLDER_VALUES: Assumptions = {
   salesPct: 5,
   maintPct: 3,
 
-  y1CAM: 15000000,
-  y1BaseFee: 12000000,
-  y1TechFee: 12000000,
+  camFeePerUnit: 1250000, // Rp1,250,000/month/unit (starts when operational)
+  baseFeePercent: 2, // 2% of total revenue
+  techFeePerUnit: 1200000, // Rp1,200,000/month/unit (charged even during development)
   incentiveFeePct: 0
 };
 

@@ -72,11 +72,14 @@ export function calculateProjections(assumptions: Assumptions): YearlyData[] {
   const data: YearlyData[] = [];
   const baseYear = getBaseYear(assumptions);
 
-  // Track unprorated base values for growth calculations (not affected by operational factor)
-  let prevUnproratedFB = 0;
-  let prevUnproratedSpa = 0;
-  let prevUnproratedOODs = 0;
-  let prevUnproratedMisc = 0;
+  // Pre-calculate first operational year index (used for growth calculations)
+  let firstOperationalYearIndex = -1;
+  for (let j = 0; j < 10; j++) {
+    if (getOperationalFactor(baseYear + j, assumptions) > 0) {
+      firstOperationalYearIndex = j;
+      break;
+    }
+  }
 
   for (let i = 0; i < 10; i++) {
     const calendarYear = baseYear + i;
@@ -85,19 +88,40 @@ export function calculateProjections(assumptions: Assumptions): YearlyData[] {
     // Get operational factor for this year (affects occupancy due to property readiness)
     const operationalFactor = getOperationalFactor(calendarYear, assumptions);
 
-    // Operational Metrics
-    const keys = assumptions.keys;
-    const occupancyIncrease = i === 0 ? 0 : (assumptions.occupancyIncreases[i - 1] ?? 0);
-
-    // Base occupancy calculation
-    const baseOccupancy = i === 0 ? assumptions.y1Occupancy : (prevYear?.occupancy || 0) + occupancyIncrease;
-    // Apply operational factor (prorates occupancy if property not ready full year)
-    const occupancy = baseOccupancy * operationalFactor;
-
-    // ADR only shows and grows from operational years
-    // For pre-operational years, ADR is 0 (empty)
+    // Determine if operational now and if was operational last year
     const isOperational = operationalFactor > 0;
     const wasOperationalLastYear = prevYear ? getOperationalFactor(calendarYear - 1, assumptions) > 0 : false;
+
+    // Operational Metrics
+    const keys = assumptions.keys;
+
+    // Occupancy calculation - matches spreadsheet logic:
+    // - Development phase: 0% (property not operational)
+    // - First operational year: y1Occupancy (base)
+    // - Subsequent operational years: previous occupancy + yearly increase
+    let occupancy: number;
+    let occupancyIncrease: number;
+
+    if (!isOperational) {
+      // Development phase: no occupancy
+      occupancy = 0;
+      occupancyIncrease = 0;
+    } else if (!wasOperationalLastYear) {
+      // First operational year: use base occupancy (prorated if partial year)
+      occupancy = assumptions.y1Occupancy * operationalFactor;
+      occupancyIncrease = assumptions.y1Occupancy; // Show the base as the "increase" from 0
+    } else {
+      // Subsequent operational years: previous + increase
+      // Get the occupancy increase for this year relative to first operational year
+      const operationalYearNumber = i - firstOperationalYearIndex;
+      occupancyIncrease = operationalYearNumber > 0 ? (assumptions.occupancyIncreases[operationalYearNumber - 1] ?? 0) : 0;
+
+      // Un-prorate previous occupancy if it was a partial year
+      const prevOpFactor = getOperationalFactor(calendarYear - 1, assumptions);
+      const prevBaseOccupancy = prevOpFactor > 0 ? (prevYear?.occupancy || 0) / prevOpFactor : assumptions.y1Occupancy;
+
+      occupancy = prevBaseOccupancy + occupancyIncrease;
+    }
 
     let adr: number;
     let adrGrowth: number;
@@ -122,23 +146,54 @@ export function calculateProjections(assumptions: Assumptions): YearlyData[] {
     // Revenue Categories (prorated by operational factor when property not ready)
     const revenueRooms = keys * 365 * (occupancy / 100) * adr;
 
-    // Calculate unprorated base values for this year (used for growth and display)
-    const unproratedFB = i === 0 ? assumptions.y1FB : prevUnproratedFB * (1 + assumptions.fbGrowth / 100);
-    const unproratedSpa = i === 0 ? assumptions.y1Spa : prevUnproratedSpa * (1 + assumptions.spaGrowth / 100);
-    const unproratedOODs = i === 0 ? assumptions.y1OODs : prevUnproratedOODs;
-    const unproratedMisc = i === 0 ? assumptions.y1Misc : prevUnproratedMisc;
 
-    // Apply operational factor to non-room revenues (only for the year property becomes ready)
-    const revenueFB = unproratedFB * operationalFactor;
-    const revenueSpa = unproratedSpa * operationalFactor;
-    const revenueOODs = unproratedOODs * operationalFactor;
-    const revenueMisc = unproratedMisc * operationalFactor;
+    // F&B, Spa, etc. grow from the BASE value (not from prorated output)
+    // During development: output is 0 but base value still grows
+    // First operational year: use base value (which has been growing)
+    // Spreadsheet pattern: base value in first operational year, then grows
+    let baseFB: number;
+    let baseSpa: number;
+    let baseOODs: number;
+    let baseMisc: number;
 
-    // Store unprorated values for next year's growth calculation
-    prevUnproratedFB = unproratedFB;
-    prevUnproratedSpa = unproratedSpa;
-    prevUnproratedOODs = unproratedOODs;
-    prevUnproratedMisc = unproratedMisc;
+    if (!isOperational) {
+      // Development phase: calculate what the base WOULD be (for tracking growth)
+      // but output will be 0
+      if (i === 0) {
+        baseFB = assumptions.y1FB;
+        baseSpa = assumptions.y1Spa;
+        baseOODs = assumptions.y1OODs;
+        baseMisc = assumptions.y1Misc;
+      } else {
+        // During development, F&B doesn't grow (matches spreadsheet - growth starts from operational)
+        baseFB = assumptions.y1FB;
+        baseSpa = assumptions.y1Spa;
+        baseOODs = assumptions.y1OODs;
+        baseMisc = assumptions.y1Misc;
+      }
+    } else if (!wasOperationalLastYear) {
+      // First operational year: use base Y1 values
+      baseFB = assumptions.y1FB;
+      baseSpa = assumptions.y1Spa;
+      baseOODs = assumptions.y1OODs;
+      baseMisc = assumptions.y1Misc;
+    } else {
+      // Subsequent operational years: grow from previous year's BASE (un-prorated)
+      const prevOpFactor = getOperationalFactor(calendarYear - 1, assumptions);
+      const prevBaseFB = prevOpFactor > 0 ? (prevYear?.revenueFB || 0) / prevOpFactor : assumptions.y1FB;
+      const prevBaseSpa = prevOpFactor > 0 ? (prevYear?.revenueSpa || 0) / prevOpFactor : assumptions.y1Spa;
+
+      baseFB = prevBaseFB * (1 + assumptions.fbGrowth / 100);
+      baseSpa = prevBaseSpa * (1 + assumptions.spaGrowth / 100);
+      baseOODs = prevYear?.revenueOODs || assumptions.y1OODs;
+      baseMisc = prevYear?.revenueMisc || assumptions.y1Misc;
+    }
+
+    // Apply operational factor to get actual revenue (0 during development)
+    const revenueFB = baseFB * operationalFactor;
+    const revenueSpa = baseSpa * operationalFactor;
+    const revenueOODs = baseOODs * operationalFactor;
+    const revenueMisc = baseMisc * operationalFactor;
     
     const totalRevenue = revenueRooms + revenueFB + revenueSpa + revenueOODs + revenueMisc;
     const trevpar = totalRevenue / (keys * 365);
@@ -174,17 +229,66 @@ export function calculateProjections(assumptions: Assumptions): YearlyData[] {
     const gop = totalRevenue - totalOperatingCost - totalUndistributedCost;
     const gopMargin = totalRevenue ? (gop / totalRevenue) * 100 : 0;
 
-    // Management & Ownership Fees (prorated for partial years based on purchase date)
-    const purchaseYearFactor = getPurchaseYearFactor(calendarYear, assumptions);
-    const baseCAM = i === 0 ? assumptions.y1CAM : (prevYear?.feeCAM || 0) / (getPurchaseYearFactor(calendarYear - 1, assumptions) || 1) * (1 + assumptions.camGrowth / 100);
-    const baseBaseFee = i === 0 ? assumptions.y1BaseFee : (prevYear?.feeBase || 0) / (getPurchaseYearFactor(calendarYear - 1, assumptions) || 1) * (1 + assumptions.baseFeeGrowth / 100);
-    const baseTechFee = i === 0 ? assumptions.y1TechFee : (prevYear?.feeTech || 0) / (getPurchaseYearFactor(calendarYear - 1, assumptions) || 1) * (1 + assumptions.techFeeGrowth / 100);
+    // Management & Ownership Fees
+    // Following the spreadsheet logic:
+    // - Tech Fee: Always charged (even during development), but growth only starts from first operational year
+    // - CAM Fee: Only when operational, grows from previous year
+    // - Base Fee: First operational year = % of revenue, then grows from that base
 
-    // Apply purchase year factor to prorate fees for partial years
-    const feeCAM = baseCAM * purchaseYearFactor;
-    const feeBase = baseBaseFee * purchaseYearFactor;
-    const feeTech = baseTechFee * purchaseYearFactor;
-    const feeIncentive = gop * (assumptions.incentiveFeePct / 100);
+    const purchaseYearFactor = getPurchaseYearFactor(calendarYear, assumptions);
+
+    // Tech Fee: Charged from year 1 (even during development)
+    // But growth only applies AFTER the first operational year (matching spreadsheet)
+    // Formula: techFeePerUnit × 12 × keys, grows with techFeeGrowth from first operational year
+    let feeTech: number;
+    const baseAnnualTechFee = assumptions.techFeePerUnit * 12 * assumptions.keys;
+
+    if (i === 0) {
+      // First year: base tech fee (prorated for partial year if purchased mid-year)
+      feeTech = baseAnnualTechFee * purchaseYearFactor;
+    } else if (firstOperationalYearIndex < 0 || i <= firstOperationalYearIndex) {
+      // Development phase OR first operational year: full base fee, no growth
+      feeTech = baseAnnualTechFee;
+    } else {
+      // After first operational year: compound growth from first operational year
+      const yearsOfGrowth = i - firstOperationalYearIndex;
+      feeTech = baseAnnualTechFee * Math.pow(1 + assumptions.techFeeGrowth / 100, yearsOfGrowth);
+    }
+
+    // CAM Fee: Only when property is operational
+    // Formula: camFeePerUnit × 12 × keys (only when operational), grows with camGrowth
+    let feeCAM: number;
+    if (!isOperational) {
+      // Not operational yet: no CAM fee
+      feeCAM = 0;
+    } else if (!wasOperationalLastYear) {
+      // First operational year: base CAM fee (prorated by operational factor)
+      feeCAM = assumptions.camFeePerUnit * 12 * assumptions.keys * operationalFactor;
+    } else {
+      // Subsequent operational years: grow from previous year
+      const prevOpFactor = getOperationalFactor(calendarYear - 1, assumptions);
+      const prevUnprorated = prevOpFactor > 0 ? (prevYear?.feeCAM || 0) / prevOpFactor : assumptions.camFeePerUnit * 12 * assumptions.keys;
+      feeCAM = prevUnprorated * (1 + assumptions.camGrowth / 100) * operationalFactor;
+    }
+
+    // Base Fee: Percentage of total revenue (first operational year), then grows
+    // Formula: baseFeePercent × totalRevenue (first year), then grows with baseFeeGrowth
+    let feeBase: number;
+    if (!isOperational || totalRevenue === 0) {
+      // Not operational or no revenue: no base fee
+      feeBase = 0;
+    } else if (!wasOperationalLastYear) {
+      // First operational year: calculate as % of revenue
+      feeBase = totalRevenue * (assumptions.baseFeePercent / 100);
+    } else {
+      // Subsequent operational years: grow from previous year's base fee
+      // Note: We grow from the actual previous fee, not recalculate from revenue
+      const prevBaseFee = prevYear?.feeBase || 0;
+      feeBase = prevBaseFee * (1 + assumptions.baseFeeGrowth / 100);
+    }
+
+    // Incentive Fee: % of GOP (only when operational)
+    const feeIncentive = isOperational ? gop * (assumptions.incentiveFeePct / 100) : 0;
     
     const totalManagementFees = feeCAM + feeBase + feeTech + feeIncentive;
     const managementFeesPercent = totalRevenue ? (totalManagementFees / totalRevenue) * 100 : 0;

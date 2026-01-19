@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from 'react';
 import type { Assumptions, CurrencyConfig } from '../types';
 import { PLACEHOLDER_VALUES } from '../constants';
 import { Tooltip } from '../../../components/ui/Tooltip';
@@ -70,18 +71,18 @@ const AssumptionsPanel = ({ assumptions, onChange, currency }: Props) => {
           </div>
         </section>
 
-        {/* Management Fees - Year 1 Bases */}
+        {/* Management Fees */}
         <section className="space-y-8">
           <div className="flex items-center gap-2.5">
             <div className="w-2 h-2 rounded-full bg-purple-500"></div>
             <h3 className="text-base font-semibold text-slate-700">
-              Year 1 Management Fees ({currency.code})
+              Management Fees
             </h3>
           </div>
           <div className="grid grid-cols-2 gap-x-12 gap-y-10">
-            <CurrencyInput label="CAM Fee" value={assumptions.y1CAM} placeholder={PLACEHOLDER_VALUES.y1CAM} onChange={(v) => handleChange('y1CAM', v)} currency={currency} tooltip="Common Area Maintenance fee per year. Covers shared facilities, landscaping, and common area upkeep." />
-            <CurrencyInput label="Base Fee" value={assumptions.y1BaseFee} placeholder={PLACEHOLDER_VALUES.y1BaseFee} onChange={(v) => handleChange('y1BaseFee', v)} currency={currency} tooltip="Base management fee per year. Fixed fee paid to property management company." />
-            <CurrencyInput label="Tech Fee" value={assumptions.y1TechFee} placeholder={PLACEHOLDER_VALUES.y1TechFee} onChange={(v) => handleChange('y1TechFee', v)} currency={currency} tooltip="Technology fee per year. Covers PMS, booking systems, and IT infrastructure." />
+            <CurrencyInput label="CAM Fee/Unit/Mo" value={assumptions.camFeePerUnit} placeholder={PLACEHOLDER_VALUES.camFeePerUnit} onChange={(v) => handleChange('camFeePerUnit', v)} currency={currency} tooltip="Monthly CAM fee per unit. Formula: CAM × 12 × keys. Only charged when property is operational." />
+            <SecondaryInput label="Base Fee %" value={assumptions.baseFeePercent} placeholder={PLACEHOLDER_VALUES.baseFeePercent} onChange={(v) => handleChange('baseFeePercent', v)} isPercentage tooltip="Base management fee as % of total revenue (first operational year), then grows with fee growth rate." />
+            <CurrencyInput label="Tech Fee/Unit/Mo" value={assumptions.techFeePerUnit} placeholder={PLACEHOLDER_VALUES.techFeePerUnit} onChange={(v) => handleChange('techFeePerUnit', v)} currency={currency} tooltip="Monthly tech fee per unit. Formula: Tech × 12 × keys. Charged even during development phase." />
             <SecondaryInput label="Incentive %" value={assumptions.incentiveFeePct} placeholder={PLACEHOLDER_VALUES.incentiveFeePct} onChange={(v) => handleChange('incentiveFeePct', v)} isPercentage tooltip="Incentive fee as % of GOP. Performance-based fee paid when profitability targets are exceeded." />
           </div>
         </section>
@@ -98,6 +99,31 @@ const SecondaryInput: React.FC<{
   isPercentage?: boolean;
   tooltip?: string;
 }> = ({ label, value, placeholder, onChange, isPercentage, tooltip }) => {
+  const [inputValue, setInputValue] = useState<string>(value ? value.toString() : '');
+
+  useEffect(() => {
+    if (value === 0 || !value) {
+      setInputValue('');
+    } else if (parseFloat(inputValue.replace(',', '.')) !== value) {
+      setInputValue(value.toString());
+    }
+  }, [value]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = sanitizeDecimalInput(raw);
+    setInputValue(sanitized);
+
+    if (sanitized === '' || sanitized === '.' || sanitized === ',') {
+      onChange(0);
+    } else {
+      const num = parseDecimalInput(sanitized);
+      if (!isNaN(num)) {
+        onChange(num);
+      }
+    }
+  };
+
   return (
     <div className="space-y-3">
       <label className="flex items-center gap-1.5 text-sm font-medium text-slate-600 ml-0.5">
@@ -108,17 +134,9 @@ const SecondaryInput: React.FC<{
         <input
           type="text"
           inputMode="decimal"
-          value={value || ''}
+          value={inputValue}
           placeholder={placeholder?.toString() || '0'}
-          onChange={(e) => {
-            const inputVal = sanitizeDecimalInput(e.target.value);
-            if (inputVal === '' || inputVal === '.' || inputVal === ',') {
-              onChange(0);
-            } else {
-              const num = parseDecimalInput(inputVal);
-              onChange(isNaN(num) ? 0 : num);
-            }
-          }}
+          onChange={handleInputChange}
           className="w-full bg-[#fcfdfe] border border-slate-200 rounded-2xl px-6 py-5 text-[17px] font-bold text-slate-900 placeholder:text-slate-300 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 focus:bg-white transition-all tabular-nums"
         />
         {isPercentage && (
@@ -137,15 +155,35 @@ const CurrencyInput: React.FC<{
   currency: CurrencyConfig;
   tooltip?: string;
 }> = ({ label, value, placeholder, onChange, currency, tooltip }) => {
-  const displayValue = value ? (value / currency.rate) : '';
   const displayPlaceholder = placeholder ? (placeholder / currency.rate) : 0;
+  const [inputValue, setInputValue] = useState<string>(() => {
+    if (!value) return '';
+    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value / currency.rate);
+  });
+
+  useEffect(() => {
+    if (value === 0 || !value) {
+      setInputValue('');
+    } else {
+      // Only update if the numeric value changed (not just formatting)
+      const currentNum = parseDecimalInput(inputValue);
+      const newDisplayValue = value / currency.rate;
+      if (Math.abs(currentNum - newDisplayValue) > 0.001) {
+        setInputValue(new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(newDisplayValue));
+      }
+    }
+  }, [value, currency.rate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.replace(/,/g, '');
-    const num = parseFloat(rawValue);
+    const raw = e.target.value;
+    // Allow digits, commas, and periods
+    const sanitized = raw.replace(/[^0-9.,]/g, '');
+    setInputValue(sanitized);
+
+    const num = parseDecimalInput(sanitized);
     if (!isNaN(num)) {
       onChange(num * currency.rate);
-    } else if (rawValue === '') {
+    } else if (sanitized === '' || sanitized === ',' || sanitized === '.') {
       onChange(0);
     }
   };
@@ -164,7 +202,8 @@ const CurrencyInput: React.FC<{
         <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[13px] font-bold text-slate-300">{currency.symbol}</span>
         <input
           type="text"
-          value={displayValue ? formatNumber(Number(displayValue)) : ''}
+          inputMode="decimal"
+          value={inputValue}
           placeholder={formatNumber(displayPlaceholder)}
           onChange={handleInputChange}
           className="w-full bg-[#fcfdfe] border border-slate-200 rounded-2xl pl-12 pr-6 py-5 text-[17px] font-bold text-slate-900 placeholder:text-slate-300 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 focus:bg-white transition-all tabular-nums"

@@ -133,8 +133,11 @@ export interface Assumptions {
   maintPct: number;
 
   // Management Fee Bases (Y1)
-  y1CAM: number;
-  y1BaseFee: number;
-  y1TechFee: number;
+  // CAM Fee: monthly per-unit fee × 12 × keys (only when operational)
+  camFeePerUnit: number; // Monthly CAM fee per unit in IDR
+  // Base Fee: percentage of total revenue (first operational year), then grows
+  baseFeePercent: number; // % of total revenue (e.g., 2 for 2%)
+  // Tech Fee: monthly per-unit fee × 12 × keys (charged even during development)
+  techFeePerUnit: number; // Monthly tech fee per unit in IDR
   incentiveFeePct: number; // % of GOP
 }

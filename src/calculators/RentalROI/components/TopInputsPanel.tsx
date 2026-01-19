@@ -346,32 +346,66 @@ const TopInputsPanel: React.FC<Props> = ({ assumptions, onChange, currency }) =>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-4">
             {assumptions.occupancyIncreases.map((val, idx) => (
-              <div key={idx} className="space-y-2">
-                <label className="text-xs font-medium text-slate-500">Y{idx + 2}</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={val === null ? '' : val}
-                    placeholder={PLACEHOLDER_VALUES.occupancyIncreases[idx]?.toString() || '0'}
-                    onChange={(e) => {
-                      const inputVal = sanitizeDecimalInput(e.target.value);
-                      if (inputVal === '' || inputVal === '.' || inputVal === ',') {
-                        handleOccupancyIncreaseChange(idx, null);
-                      } else {
-                        const num = parseDecimalInput(inputVal);
-                        handleOccupancyIncreaseChange(idx, isNaN(num) ? null : num);
-                      }
-                    }}
-                    className="w-full bg-[#fcfdfe] border border-slate-200 rounded-xl px-3 py-2 text-[13px] font-bold text-slate-900 placeholder:text-slate-300 focus:border-[#4f46e5] focus:ring-1 focus:ring-[#4f46e5] outline-none"
-                  />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-300">%</span>
-                </div>
-              </div>
+              <OccupancyIncreaseInput
+                key={idx}
+                index={idx}
+                value={val}
+                placeholder={PLACEHOLDER_VALUES.occupancyIncreases[idx] ?? 0}
+                onChange={handleOccupancyIncreaseChange}
+              />
             ))}
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+const OccupancyIncreaseInput: React.FC<{
+  index: number;
+  value: number | null;
+  placeholder: number;
+  onChange: (index: number, value: number | null) => void;
+}> = ({ index, value, placeholder, onChange }) => {
+  const [inputValue, setInputValue] = useState<string>(value !== null ? value.toString() : '');
+
+  useEffect(() => {
+    if (value === null) {
+      setInputValue('');
+    } else if (parseFloat(inputValue) !== value) {
+      setInputValue(value.toString());
+    }
+  }, [value]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = sanitizeDecimalInput(raw);
+    setInputValue(sanitized);
+
+    if (sanitized === '' || sanitized === '.' || sanitized === ',') {
+      onChange(index, null);
+    } else {
+      const num = parseDecimalInput(sanitized);
+      if (!isNaN(num)) {
+        onChange(index, num);
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-medium text-slate-500">Y{index + 2}</label>
+      <div className="relative">
+        <input
+          type="text"
+          inputMode="decimal"
+          value={inputValue}
+          placeholder={placeholder.toString()}
+          onChange={handleInputChange}
+          className="w-full bg-[#fcfdfe] border border-slate-200 rounded-xl px-3 py-2 text-[13px] font-bold text-slate-900 placeholder:text-slate-300 focus:border-[#4f46e5] focus:ring-1 focus:ring-[#4f46e5] outline-none"
+        />
+        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-300">%</span>
+      </div>
     </div>
   );
 };
@@ -417,17 +451,21 @@ const TopInputGroup: React.FC<{
   }, [displayValue, isPercentage, noSeparator, isFocused, value]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputVal = e.target.value;
-    setInputValue(inputVal);
+    const raw = e.target.value;
+    // For currency inputs, allow commas as thousand separators; for percentages, allow as decimal
+    const sanitized = isPercentage || noSeparator
+      ? sanitizeDecimalInput(raw)
+      : raw.replace(/[^0-9.,]/g, '');
+    setInputValue(sanitized);
 
     // Allow comma as decimal separator for all fields
-    const num = parseDecimalInput(inputVal);
+    const num = parseDecimalInput(sanitized);
 
     if (!isNaN(num)) {
       const modelValue = currency ? (num * currency.rate) : num;
       lastValueRef.current = modelValue;
       onChange(modelValue);
-    } else if (inputVal === '' || inputVal === ',' || inputVal === '.') {
+    } else if (sanitized === '' || sanitized === ',' || sanitized === '.') {
       lastValueRef.current = 0;
       onChange(0);
     }
