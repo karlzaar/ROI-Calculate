@@ -73,70 +73,72 @@ const ProjectionsTable: React.FC<Props> = ({ data, avg, currency }) => {
 
   const sections: SectionConfig[] = [
     {
-      title: 'Occupancy Based Performance',
+      title: 'Operational Metrics',
       isExpandedByDefault: true,
       rows: [
+        { label: '# of Keys (Daily Inventory)', key: 'keys', type: 'num' },
         { label: 'Occupancy (%)', key: 'occupancy', type: 'pct' },
+        { label: 'Occ. Increase (% pts.)', key: 'occupancyIncrease', type: 'pct', indent: true },
         { label: 'Average Daily Rate (ADR)', key: 'adr', type: 'curr' },
-        { label: 'RevPAR', key: 'revpar', type: 'curr' },
+        { label: 'ADR Growth (%)', key: 'adrGrowth', type: 'pct', indent: true },
       ]
     },
     {
-      title: 'Gross Revenue Breakdown',
+      title: 'Total Revenue',
       isExpandedByDefault: true,
       rows: [
-        { label: 'Rooms Revenue', key: 'revenueRooms', type: 'curr', indent: true },
-        { label: 'Food & Beverage', key: 'revenueFB', type: 'curr', indent: true },
-        { label: 'Wellness & Spa', key: 'revenueSpa', type: 'curr', indent: true },
-        { label: 'Total Gross Revenue', key: 'totalRevenue', type: 'curr', bold: true },
+        { label: 'Total Revenue', key: 'totalRevenue', type: 'curr', bold: true },
+        { label: 'Growth (%)', key: 'revenueGrowth', type: 'pct', indent: true },
+        { label: 'Rooms', key: 'revenueRooms', type: 'curr', indent: true },
+        { label: 'Food and Beverage (F&B)', key: 'revenueFB', type: 'curr', indent: true },
+        { label: 'Wellness/Sports/Health', key: 'revenueSpa', type: 'curr', indent: true },
       ]
     },
     {
-      title: 'Operating Expenses',
+      title: 'Total Operating Cost',
       rows: [
-        { label: 'Direct Rooms Cost', key: 'costRooms', type: 'curr', indent: true },
-        { label: 'F&B Operations', key: 'costFB', type: 'curr', indent: true },
-        { label: 'Wellness/Spa Cost', key: 'costSpa', type: 'curr', indent: true },
-        { label: 'Utilities & General', key: 'costUtilities', type: 'curr', indent: true },
-        { label: 'Total Direct Expenses', key: 'totalOperatingCost', type: 'curr', bold: true, color: 'text-red-500' },
+        { label: 'Total Operating Cost', key: 'totalOperatingCost', type: 'curr', bold: true, color: 'text-red-600' },
+        { label: 'Rooms Cost', key: 'costRooms', type: 'curr', indent: true },
+        { label: 'Food & Beverage Cost', key: 'costFB', type: 'curr', indent: true },
+        { label: 'Wellness/Sports/Health', key: 'costSpa', type: 'curr', indent: true },
+        { label: 'Utilities', key: 'costUtilities', type: 'curr', indent: true },
       ]
     },
     {
       title: 'Undistributed Expenses',
       rows: [
+        { label: 'Total Undistributed', key: 'totalUndistributedCost', type: 'curr', bold: true, color: 'text-red-600' },
         { label: 'Admin & General', key: 'undistributedAdmin', type: 'curr', indent: true },
         { label: 'Sales & Marketing', key: 'undistributedSales', type: 'curr', indent: true },
-        { label: 'Property Ops', key: 'undistributedMaintenance', type: 'curr', indent: true },
-        { label: 'Total Undistributed', key: 'totalUndistributedCost', type: 'curr', bold: true, color: 'text-red-500' },
+        { label: 'Property Ops & Maintenance', key: 'undistributedMaintenance', type: 'curr', indent: true },
       ]
     },
     {
-      title: 'Operational Profitability',
+      title: 'Gross Operating Profit (GOP)',
       isExpandedByDefault: true,
       rows: [
-        { label: 'Gross Operating Profit (GOP)', key: 'gop', type: 'curr', bold: true },
+        { label: 'GOP', key: 'gop', type: 'curr', bold: true, color: 'text-green-600' },
         { label: 'GOP Margin (%)', key: 'gopMargin', type: 'pct', indent: true },
       ]
     },
     {
-      title: 'Management Fees & Fixed Dues',
+      title: 'Management Fees',
       isExpandedByDefault: true,
       rows: [
-        { label: 'Common Area Maintenance (CAM)', key: 'feeCAM', type: 'curr', indent: true },
+        { label: 'Total Management Fees', key: 'totalManagementFees', type: 'curr', bold: true, color: 'text-red-600' },
+        { label: 'CAM Fee', key: 'feeCAM', type: 'curr', indent: true },
         { label: 'Base Management Fee', key: 'feeBase', type: 'curr', indent: true },
         { label: 'Technology Fee', key: 'feeTech', type: 'curr', indent: true },
         { label: 'Incentive Fee', key: 'feeIncentive', type: 'curr', indent: true },
-        { label: 'Total Fees & Deductions', key: 'totalManagementFees', type: 'curr', bold: true, color: 'text-red-500' },
       ]
     },
     {
-      title: 'Investor Returns & Net Cash Flow',
+      title: 'Net Profit & Returns',
       isExpandedByDefault: true,
       rows: [
-        { label: 'Take Home Profit (Owner Cash Flow)', key: 'takeHomeProfit', type: 'curr', bold: true },
+        { label: 'Take Home Profit', key: 'takeHomeProfit', type: 'curr', bold: true, color: 'text-green-600' },
         { label: 'Net Profit Margin (%)', key: 'profitMargin', type: 'pct', indent: true },
-        { label: 'ROI - Gross Yield (Yield on Cost)', key: 'roiBeforeManagement', type: 'pct', bold: true },
-        { label: 'ROI - Net Yield (Cash on Cash)', key: 'roiAfterManagement', type: 'pct', bold: true, color: 'text-blue-600 font-bold' },
+        { label: 'ROI - Net Yield (%)', key: 'roiAfterManagement', type: 'pct', bold: true, color: 'text-blue-600' },
       ]
     }
   ];
