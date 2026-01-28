@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { InvestmentData, XIRRResult } from '../../../types/investment';
 import { AuthModal, type User } from '../../../components/ui/AuthModal';
+import { Toast } from '../../../components/ui/Toast';
 import { generatePDFReport } from '../../../utils/pdfExport';
+import { sendPDFByEmail } from '../../../utils/sendEmail';
 import { generatePaymentSchedule } from '../../../utils/xirr';
 
 interface Props {
@@ -31,6 +33,7 @@ export function ReportView({
 }: Props) {
   const [showAuth, setShowAuth] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   // Helper to convert IDR to display currency (for calculations only)
   const toDisplay = (idr: number): number => Math.round(idr / rate);
@@ -41,7 +44,7 @@ export function ReportView({
   const exportPDF = async () => {
     setIsExporting(true);
     try {
-      await generatePDFReport({
+      const { pdfBase64, fileName } = await generatePDFReport({
         data,
         result,
         currency,
@@ -50,6 +53,22 @@ export function ReportView({
         formatAbbrev,
         rate,
       });
+
+      // Send PDF to user's email
+      if (user?.email) {
+        sendPDFByEmail({
+          email: user.email,
+          pdfBase64,
+          fileName,
+          reportType: 'XIRR Investment',
+        }).then((success) => {
+          if (success) {
+            setToast({ message: `Report sent to ${user.email}`, type: 'success' });
+          } else {
+            setToast({ message: 'PDF downloaded. Email delivery failed.', type: 'error' });
+          }
+        });
+      }
     } catch (error) {
       console.error('PDF export error:', error);
     } finally {
@@ -104,6 +123,13 @@ export function ReportView({
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <AuthModal
         isOpen={showAuth}
         onClose={() => setShowAuth(false)}

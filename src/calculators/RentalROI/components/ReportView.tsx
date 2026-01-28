@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { YearlyData, Assumptions, CurrencyConfig, User } from '../types';
 import AuthModal from './AuthModal';
+import { Toast } from '../../../components/ui/Toast';
 import { generateRentalROIPDF } from '../utils/pdfExport';
+import { sendPDFByEmail } from '../../../utils/sendEmail';
 import { formatCurrency } from '../constants';
 
 interface Props {
@@ -17,16 +19,33 @@ interface Props {
 const ReportView: React.FC<Props> = ({ data, assumptions, currency, user, onLogin, onBack }) => {
   const [showAuth, setShowAuth] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const exportPDF = async () => {
     setIsExporting(true);
     try {
-      await generateRentalROIPDF({
+      const { pdfBase64, fileName } = await generateRentalROIPDF({
         data,
         assumptions,
         currency,
         projectName: 'Property Investment',
       });
+
+      // Send PDF to user's email
+      if (user?.email) {
+        sendPDFByEmail({
+          email: user.email,
+          pdfBase64,
+          fileName,
+          reportType: '10-Year Rental ROI',
+        }).then((success) => {
+          if (success) {
+            setToast({ message: `Report sent to ${user.email}`, type: 'success' });
+          } else {
+            setToast({ message: 'PDF downloaded. Email delivery failed.', type: 'error' });
+          }
+        });
+      }
     } catch (error) {
       console.error('PDF export error:', error);
     } finally {
@@ -72,6 +91,13 @@ const ReportView: React.FC<Props> = ({ data, assumptions, currency, user, onLogi
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <AuthModal
         isOpen={showAuth}
         onClose={() => setShowAuth(false)}

@@ -76,7 +76,7 @@ async function loadLogoAsBase64(): Promise<string> {
   }
 }
 
-export async function generatePDFReport(options: PDFExportOptions): Promise<void> {
+export async function generatePDFReport(options: PDFExportOptions): Promise<{ pdfBase64: string; fileName: string }> {
   const { data, result, currency, symbol, rate } = options;
 
   // Load logo
@@ -648,5 +648,12 @@ export async function generatePDFReport(options: PDFExportOptions): Promise<void
   // Save
   const projectName = data.property.projectName || 'Investment';
   const fileName = `ROI_Calculate_${projectName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+  // Extract base64 before saving
+  const pdfDataUri = doc.output('datauristring');
+  const pdfBase64 = pdfDataUri.split(',')[1];
+
   doc.save(fileName);
+
+  return { pdfBase64, fileName };
 }

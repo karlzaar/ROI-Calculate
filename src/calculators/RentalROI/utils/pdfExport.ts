@@ -76,7 +76,7 @@ async function loadLogoAsBase64(): Promise<string> {
   }
 }
 
-export async function generateRentalROIPDF(options: PDFExportOptions): Promise<void> {
+export async function generateRentalROIPDF(options: PDFExportOptions): Promise<{ pdfBase64: string; fileName: string }> {
   const { data, assumptions, currency, projectName } = options;
 
   // Load logo
@@ -526,5 +526,12 @@ export async function generateRentalROIPDF(options: PDFExportOptions): Promise<v
 
   // Save PDF
   const fileName = `ROI_Calculate_${(projectName || 'Analysis').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+  // Extract base64 before saving
+  const pdfDataUri = doc.output('datauristring');
+  const pdfBase64 = pdfDataUri.split(',')[1];
+
   doc.save(fileName);
+
+  return { pdfBase64, fileName };
 }
