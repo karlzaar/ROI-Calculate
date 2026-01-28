@@ -25,9 +25,21 @@ export function PropertyDetails({ data, symbol, displayPrice, onUpdate, onPriceC
     return parseInt(digits, 10) || 0;
   };
 
+  // Parse decimal input: allow digits, dots, and commas
+  const parseDecimalInput = (value: string): number => {
+    const cleaned = value.replace(/,/g, '');
+    return parseFloat(cleaned) || 0;
+  };
+
   // Format number with commas
   const formatNumber = (num: number): string => {
     return num.toLocaleString('en-US');
+  };
+
+  // Format number preserving decimals
+  const formatDecimal = (num: number): string => {
+    if (num === 0) return '';
+    return num % 1 === 0 ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
   };
 
   return (
@@ -104,8 +116,8 @@ export function PropertyDetails({ data, symbol, displayPrice, onUpdate, onPriceC
           <div className="relative">
             <input
               type="text"
-              value={data.propertySize > 0 ? formatNumber(data.propertySize) : ''}
-              onChange={(e) => onUpdate('propertySize', parseInput(e.target.value))}
+              value={data.propertySize > 0 ? formatDecimal(data.propertySize) : ''}
+              onChange={(e) => onUpdate('propertySize', parseDecimalInput(e.target.value))}
               placeholder="100"
               className="w-full rounded-lg bg-surface-alt border border-border px-4 py-3 pr-12 text-text-primary font-mono placeholder:text-text-muted focus:border-primary focus:outline-none"
             />
