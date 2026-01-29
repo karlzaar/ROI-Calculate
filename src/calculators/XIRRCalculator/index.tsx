@@ -256,6 +256,20 @@ export function XIRRCalculator() {
           </div>
         </header>
 
+        {/* Promo Video Section */}
+        <div className="mb-8 rounded-2xl overflow-hidden shadow-lg border border-border bg-surface">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-full h-auto max-h-[400px] object-cover"
+          >
+            <source src="/videos/promo.webm" type="video/webm" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-9 space-y-6">
             <PropertyDetails
