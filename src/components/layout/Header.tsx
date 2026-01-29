@@ -26,6 +26,7 @@ export function Header() {
           setUser(u);
           setShowAuth(false);
         }}
+        hideWaitlist
       />
 
       <div className="mx-auto max-w-7xl px-4 md:px-10 lg:px-20 py-4">
