@@ -67,8 +67,8 @@ export function Footer({ onSelectCalculator }: FooterProps) {
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-sm">
                 <span className="material-symbols-outlined text-base text-primary">mail</span>
-                <a href="mailto:reports@investlandgroup.com" className="hover:text-primary transition-colors">
-                  reports@investlandgroup.com
+                <a href="mailto:hello@investlandgroup.com" className="hover:text-primary transition-colors">
+                  hello@investlandgroup.com
                 </a>
               </li>
               <li className="flex items-center gap-2 text-sm">
