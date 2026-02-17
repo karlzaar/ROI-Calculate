@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 interface Props {
   isOpen: boolean;
@@ -11,6 +11,15 @@ export const EmailCollectorModal: React.FC<Props> = ({ isOpen, onClose, onSubmit
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+
+  // Reset form state when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setEmail('');
+      setError(null);
+      setSubmitted(false);
+    }
+  }, [isOpen]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();

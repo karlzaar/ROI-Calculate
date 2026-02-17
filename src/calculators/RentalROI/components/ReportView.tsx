@@ -34,23 +34,23 @@ const ReportView: React.FC<Props> = ({ data, assumptions, currency, user, onLogi
 
       // Send PDF to user's email
       if (emailToUse) {
-        sendPDFByEmail({
+        const success = await sendPDFByEmail({
           email: emailToUse,
           pdfBase64,
           fileName,
           reportType: '10-Year Rental ROI',
-        }).then((success) => {
-          if (success) {
-            setToast({ message: `Report sent to ${emailToUse}`, type: 'success' });
-          } else {
-            setToast({ message: 'PDF downloaded. Email delivery failed.', type: 'error' });
-          }
         });
+        if (success) {
+          setToast({ message: `Report sent to ${emailToUse}`, type: 'success' });
+        } else {
+          setToast({ message: 'Email delivery failed. Please try again.', type: 'error' });
+        }
       }
     } catch (error) {
       console.error('PDF export error:', error);
+      setToast({ message: 'Failed to generate report. Please try again.', type: 'error' });
     } finally {
-      setTimeout(() => setIsExporting(false), 500);
+      setIsExporting(false);
     }
   };
 
