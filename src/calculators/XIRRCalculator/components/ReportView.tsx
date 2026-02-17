@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { InvestmentData, XIRRResult } from '../../../types/investment';
-import { AuthModal, type User } from '../../../components/ui/AuthModal';
+import type { User } from '../../../components/ui/AuthModal';
+import { EmailCollectorModal } from '../../../components/ui/EmailCollectorModal';
 import { Toast } from '../../../components/ui/Toast';
 import { generatePDFReport } from '../../../utils/pdfExport';
 import { sendPDFByEmail } from '../../../utils/sendEmail';
@@ -31,7 +32,7 @@ export function ReportView({
   onLogin,
   onBack,
 }: Props) {
-  const [showAuth, setShowAuth] = useState(false);
+  const [showEmailCollector, setShowEmailCollector] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
@@ -79,19 +80,14 @@ export function ReportView({
 
   const handleDownload = () => {
     if (!user) {
-      setShowAuth(true);
+      setShowEmailCollector(true);
     } else {
       exportPDF();
     }
   };
 
-  const handleAuthSuccess = (u: User) => {
-    onLogin(u);
-    setShowAuth(false);
-    // Pass user email directly to ensure it's used
-    setTimeout(() => {
-      exportPDF(u.email);
-    }, 500);
+  const handleEmailSubmit = (email: string) => {
+    exportPDF(email);
   };
 
   // Calculations
@@ -170,11 +166,11 @@ export function ReportView({
           onClose={() => setToast(null)}
         />
       )}
-      <AuthModal
-        isOpen={showAuth}
-        onClose={() => setShowAuth(false)}
-        onSuccess={handleAuthSuccess}
-        hideWaitlist
+      <EmailCollectorModal
+        isOpen={showEmailCollector}
+        onClose={() => setShowEmailCollector(false)}
+        onSubmit={handleEmailSubmit}
+        isExporting={isExporting}
       />
 
       {/* Navigation Bar */}
