@@ -12,14 +12,12 @@ import { DraftSelector } from '../../components/ui/DraftSelector';
 import { ComparisonView } from '../../components/ui/ComparisonView';
 import { useArchivedDrafts, type ArchivedDraft } from '../../hooks/useArchivedDrafts';
 import { useAuth } from '../../lib/auth-context';
-import { useComparison } from '../../lib/comparison-context';
 
 const DRAFT_STORAGE_KEY = 'rental_roi_draft';
 
 export function RentalROICalculator() {
   const [view, setView] = useState<'dashboard' | 'report'>('dashboard');
   const { user } = useAuth();
-  const { getCount } = useComparison();
   const [showComparison, setShowComparison] = useState(false);
 
   const [currencyCode, setCurrencyCode] = useState<CurrencyCode>(() => {
@@ -238,20 +236,8 @@ export function RentalROICalculator() {
                 currency={currency}
                 assumptions={assumptions}
                 onComparisonSaved={() => setToast({ message: 'Saved to comparison!', type: 'success' })}
+                onViewComparisons={() => setShowComparison(true)}
               />
-
-              {/* View Comparisons Button */}
-              {getCount('rental-roi') > 0 && (
-                <button
-                  onClick={() => setShowComparison(true)}
-                  className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-white rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 border border-slate-200 transition-all"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <span>View Comparisons ({getCount('rental-roi')})</span>
-                </button>
-              )}
             </div>
           </div>
         </div>
