@@ -15,16 +15,7 @@ const formatCurrency = (value: number, currency: string): string => {
     USD: '$', EUR: '€', AUD: 'A$', GBP: '£', INR: '₹', CNY: '¥', AED: 'د.إ', RUB: '₽', IDR: 'Rp',
   };
   const symbol = symbols[currency] || currency;
-  if (value >= 1_000_000_000) {
-    return `${symbol} ${(value / 1_000_000_000).toFixed(2)}B`;
-  }
-  if (value >= 1_000_000) {
-    return `${symbol} ${(value / 1_000_000).toFixed(2)}M`;
-  }
-  if (value >= 1_000) {
-    return `${symbol} ${(value / 1_000).toFixed(1)}K`;
-  }
-  return `${symbol} ${value.toLocaleString()}`;
+  return `${symbol} ${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 };
 
 const formatDate = (timestamp: number): string => {

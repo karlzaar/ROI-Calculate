@@ -60,16 +60,7 @@ const formatCurrency = (value: number, currency: string): string => {
     USD: '$', EUR: '€', AUD: 'A$', GBP: '£', INR: '₹', CNY: '¥', AED: 'د.إ', RUB: '₽', IDR: 'Rp',
   };
   const symbol = symbols[currency] || currency;
-  if (value >= 1_000_000_000) {
-    return `${symbol} ${(value / 1_000_000_000).toFixed(2)}B`;
-  }
-  if (value >= 1_000_000) {
-    return `${symbol} ${(value / 1_000_000).toFixed(2)}M`;
-  }
-  if (value >= 1_000) {
-    return `${symbol} ${(value / 1_000).toFixed(1)}K`;
-  }
-  return `${symbol} ${value.toLocaleString()}`;
+  return `${symbol} ${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 };
 
 const formatDate = (timestamp: number): string => {
@@ -153,7 +144,7 @@ export async function generateRentalROIComparisonPDF(
   // ========================================
   const metricColWidth = 50;
   const dataColWidth = (contentWidth - metricColWidth) / items.length;
-  const rowHeight = 12;
+  const rowHeight = 10;
 
   // Table header row
   doc.setFillColor(...COLORS.headerBg);
@@ -175,7 +166,7 @@ export async function generateRentalROIComparisonPDF(
     doc.setFont('helvetica', 'bold');
   });
 
-  yPos += rowHeight + 6;
+  yPos += rowHeight + 4;
 
   // Data rows
   const metrics = [
@@ -428,7 +419,7 @@ export async function generateXIRRComparisonPDF(
   // ========================================
   const metricColWidth = 50;
   const dataColWidth = (contentWidth - metricColWidth) / items.length;
-  const rowHeight = 12;
+  const rowHeight = 10;
 
   // Header
   doc.setFillColor(...COLORS.headerBg);
@@ -449,7 +440,7 @@ export async function generateXIRRComparisonPDF(
     doc.setFont('helvetica', 'bold');
   });
 
-  yPos += rowHeight + 6;
+  yPos += rowHeight + 4;
 
   const metrics = [
     { label: 'Investment Rating', key: 'rating' },
