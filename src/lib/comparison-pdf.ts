@@ -181,11 +181,16 @@ export async function generateRentalROIComparisonPDF(
   const metrics = [
     { label: 'Investment Rating', key: 'rating' },
     { label: 'Initial Investment', key: 'initialInvestment' },
+    { label: 'Keys/Units', key: 'keys' },
     { label: 'Year 1 ADR', key: 'y1ADR' },
     { label: 'Year 1 Occupancy', key: 'y1Occupancy' },
+    { label: 'ADR Growth Rate', key: 'adrGrowth' },
+    { label: 'Management Fee', key: 'incentiveFeePct' },
     { label: '10-Year Avg ROI', key: 'avgROI', highlight: true },
+    { label: 'Avg Annual Cash Flow', key: 'avgAnnualCashFlow', highlight: true },
     { label: 'Total Revenue (10Y)', key: 'totalRevenue' },
     { label: 'Total Profit (10Y)', key: 'totalProfit', highlight: true },
+    { label: 'Total Mgmt Fees (10Y)', key: 'totalManagementFees' },
     { label: 'Payback Period', key: 'paybackYears' },
     { label: 'Avg GOP Margin', key: 'avgGopMargin' },
   ];
@@ -195,6 +200,7 @@ export async function generateRentalROIComparisonPDF(
   const profitValues = items.map(i => i.totalProfit);
   const paybackValues = items.map(i => i.paybackYears);
   const gopValues = items.map(i => i.avgGopMargin);
+  const cashFlowValues = items.map(i => i.avgAnnualCashFlow || 0);
 
   const bestROI = Math.max(...roiValues);
   const worstROI = Math.min(...roiValues);
@@ -204,6 +210,8 @@ export async function generateRentalROIComparisonPDF(
   const worstPayback = Math.max(...paybackValues);
   const bestGOP = Math.max(...gopValues);
   const worstGOP = Math.min(...gopValues);
+  const bestCashFlow = Math.max(...cashFlowValues);
+  const worstCashFlow = Math.min(...cashFlowValues);
 
   metrics.forEach((metric, rowIdx) => {
     const isEven = rowIdx % 2 === 0;
@@ -243,16 +251,30 @@ export async function generateRentalROIComparisonPDF(
         case 'initialInvestment':
           value = formatCurrency(item.initialInvestment, item.currency);
           break;
+        case 'keys':
+          value = item.keys ? String(item.keys) : '-';
+          break;
         case 'y1ADR':
           value = formatCurrency(item.y1ADR, item.currency);
           break;
         case 'y1Occupancy':
           value = `${item.y1Occupancy}%`;
           break;
+        case 'adrGrowth':
+          value = `${item.adrGrowth || 0}%`;
+          break;
+        case 'incentiveFeePct':
+          value = `${item.incentiveFeePct || 0}%`;
+          break;
         case 'avgROI':
           value = `${item.avgROI.toFixed(2)}%`;
           isBest = item.avgROI === bestROI && items.length > 1;
           isWorst = item.avgROI === worstROI && bestROI !== worstROI;
+          break;
+        case 'avgAnnualCashFlow':
+          value = formatCurrency(item.avgAnnualCashFlow || 0, item.currency);
+          isBest = (item.avgAnnualCashFlow || 0) === bestCashFlow && items.length > 1;
+          isWorst = (item.avgAnnualCashFlow || 0) === worstCashFlow && bestCashFlow !== worstCashFlow;
           break;
         case 'totalRevenue':
           value = formatCurrency(item.totalRevenue, item.currency);
@@ -261,6 +283,9 @@ export async function generateRentalROIComparisonPDF(
           value = formatCurrency(item.totalProfit, item.currency);
           isBest = item.totalProfit === bestProfit && items.length > 1;
           isWorst = item.totalProfit === worstProfit && bestProfit !== worstProfit;
+          break;
+        case 'totalManagementFees':
+          value = formatCurrency(item.totalManagementFees || 0, item.currency);
           break;
         case 'paybackYears':
           value = `${item.paybackYears.toFixed(1)} years`;

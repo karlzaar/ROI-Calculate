@@ -16,12 +16,20 @@ export interface RentalROIComparisonData extends ComparisonMetrics {
   y1ADR: number;
   y1Occupancy: number;
   currency: string;
+  keys: number;
+  adrGrowth: number;
+  incentiveFeePct: number;
+  purchaseDate: string;
+  propertyReadyDate: string;
+  isPropertyReady: boolean;
   // Key outputs
   avgROI: number;
   totalRevenue: number;
   totalProfit: number;
   paybackYears: number;
   avgGopMargin: number;
+  avgAnnualCashFlow: number;
+  totalManagementFees: number;
   investmentRating: {
     grade: string;
     label: string;

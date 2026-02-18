@@ -45,6 +45,7 @@ const DashboardHeader: React.FC<Props> = ({ data, currency, assumptions, onCompa
   const totalProfit = data.reduce((s, i) => s + i.takeHomeProfit, 0);
   const avgGopMargin = data.reduce((s, i) => s + i.gopMargin, 0) / data.length;
   const paybackYears = assumptions.initialInvestment / (totalProfit / 10);
+  const totalManagementFees = data.reduce((s, i) => s + i.totalManagementFees, 0);
 
   const getInvestmentRating = () => {
     if (avgROI >= 12) return { grade: 'A+', label: 'Excellent' };
@@ -69,11 +70,19 @@ const DashboardHeader: React.FC<Props> = ({ data, currency, assumptions, onCompa
       y1ADR: assumptions.y1ADR,
       y1Occupancy: assumptions.y1Occupancy,
       currency: currency.code,
+      keys: assumptions.keys,
+      adrGrowth: assumptions.adrGrowth,
+      incentiveFeePct: assumptions.incentiveFeePct,
+      purchaseDate: assumptions.purchaseDate,
+      propertyReadyDate: assumptions.propertyReadyDate,
+      isPropertyReady: assumptions.isPropertyReady,
       avgROI,
       totalRevenue,
       totalProfit,
       paybackYears,
       avgGopMargin,
+      avgAnnualCashFlow: avgProfit,
+      totalManagementFees,
       investmentRating: getInvestmentRating(),
     });
 

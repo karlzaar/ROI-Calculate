@@ -109,10 +109,13 @@ export function ComparisonView({ isOpen, onClose, calculatorType }: Props) {
     const paybackValues = items.map(i => i.paybackYears);
     const gopValues = items.map(i => i.avgGopMargin);
 
+    const cashFlowValues = items.map(i => i.avgAnnualCashFlow || 0);
+
     const roiBW = getBestWorst(roiValues, true);
     const profitBW = getBestWorst(profitValues, true);
     const paybackBW = getBestWorst(paybackValues, false);
     const gopBW = getBestWorst(gopValues, true);
+    const cashFlowBW = getBestWorst(cashFlowValues, true);
 
     return (
       <div className="overflow-x-auto">
@@ -180,6 +183,11 @@ export function ComparisonView({ isOpen, onClose, calculatorType }: Props) {
               render={(item) => formatCurrency(item.initialInvestment, item.currency)}
             />
             <MetricRow
+              label="Keys/Units"
+              items={items}
+              render={(item) => item.keys || '-'}
+            />
+            <MetricRow
               label="Year 1 ADR"
               items={items}
               render={(item) => formatCurrency(item.y1ADR, item.currency)}
@@ -190,11 +198,30 @@ export function ComparisonView({ isOpen, onClose, calculatorType }: Props) {
               render={(item) => `${item.y1Occupancy}%`}
             />
             <MetricRow
+              label="ADR Growth Rate"
+              items={items}
+              render={(item) => `${item.adrGrowth || 0}%`}
+            />
+            <MetricRow
+              label="Management Fee"
+              items={items}
+              render={(item) => `${item.incentiveFeePct || 0}%`}
+            />
+            <MetricRow
               label="10-Year Avg ROI"
               items={items}
               render={(item) => (
                 <span className={getValueClass(item.avgROI, roiBW.best, roiBW.worst)}>
                   {item.avgROI.toFixed(2)}%
+                </span>
+              )}
+            />
+            <MetricRow
+              label="Avg Annual Cash Flow"
+              items={items}
+              render={(item) => (
+                <span className={getValueClass(item.avgAnnualCashFlow || 0, cashFlowBW.best, cashFlowBW.worst)}>
+                  {formatCurrency(item.avgAnnualCashFlow || 0, item.currency)}
                 </span>
               )}
             />
@@ -211,6 +238,11 @@ export function ComparisonView({ isOpen, onClose, calculatorType }: Props) {
                   {formatCurrency(item.totalProfit, item.currency)}
                 </span>
               )}
+            />
+            <MetricRow
+              label="Total Mgmt Fees (10Y)"
+              items={items}
+              render={(item) => formatCurrency(item.totalManagementFees || 0, item.currency)}
             />
             <MetricRow
               label="Payback Period"
